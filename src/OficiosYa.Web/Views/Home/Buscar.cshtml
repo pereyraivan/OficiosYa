@@ -1,0 +1,85 @@
+@{
+    ViewData["Title"] = "Buscar Profesionales";
+}
+
+<div class="container" style="padding: 40px 0;">
+    <div class="row">
+        <div class="col-md-4">
+            <!-- Filtros de búsqueda -->
+            <div class="card" style="position: sticky; top: 100px;">
+                <div class="card-body">
+                    <h4>Filtros de búsqueda</h4>
+                    <form id="searchForm">
+                        <div class="form-group">
+                            <label for="oficio">Oficio</label>
+                            <select id="oficio" name="oficio" class="form-control">
+                                <option value="">Todos los oficios</option>
+                            </select>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="ciudad">Ciudad</label>
+                            <input type="text" id="ciudad" name="ciudad" class="form-control" placeholder="Ej: San Miguel de Tucumán">
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="precioMin">Precio mínimo por hora</label>
+                            <input type="number" id="precioMin" name="precioMin" class="form-control" placeholder="0" min="0">
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="precioMax">Precio máximo por hora</label>
+                            <input type="number" id="precioMax" name="precioMax" class="form-control" placeholder="10000" min="0">
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="calificacionMin">Calificación mínima</label>
+                            <select id="calificacionMin" name="calificacionMin" class="form-control">
+                                <option value="">Cualquier calificación</option>
+                                <option value="4">4+ estrellas</option>
+                                <option value="4.5">4.5+ estrellas</option>
+                                <option value="5">5 estrellas</option>
+                            </select>
+                        </div>
+                        
+                        <div class="form-group">
+                            <div class="form-check">
+                                <input type="checkbox" id="disponible" name="disponible" class="form-check-input">
+                                <label for="disponible" class="form-check-label">Solo disponibles ahora</label>
+                            </div>
+                        </div>
+                        
+                        <button type="submit" class="btn btn-primary" style="width: 100%;">Buscar</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-8">
+            <!-- Resultados -->
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h2>Profesionales encontrados</h2>
+                <div class="small text-muted">
+                    <span id="resultCount">0</span> resultados
+                </div>
+            </div>
+            
+            <div id="resultados">
+                <!-- Los resultados se cargarán aquí con TypeScript -->
+                <div class="text-center py-5">
+                    <i class="fas fa-search fa-3x text-muted mb-3"></i>
+                    <p class="text-muted">Usa los filtros para buscar profesionales</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        // Inicializar el componente de búsqueda
+        document.addEventListener('DOMContentLoaded', function() {
+            // El componente SearchComponent se inicializa automáticamente
+        });
+    </script>
+}
