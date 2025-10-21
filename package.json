@@ -1,0 +1,35 @@
+{
+  "name": "oficiosya-fullstack",
+  "version": "1.0.0",
+  "description": "OficiosYa - Plataforma de servicios profesionales",
+  "scripts": {
+    "dev": "concurrently \"npm run dev:backend\" \"npm run dev:frontend\"",
+    "dev:frontend": "cd src/frontend-oficiosya && npm run dev",
+    "dev:backend": "cd src/OficiosYa.Web && dotnet run",
+    "build": "npm run build:frontend && npm run build:backend",
+    "build:frontend": "cd src/frontend-oficiosya && npm run build",
+    "build:backend": "cd src/OficiosYa.Web && dotnet build",
+    "install:all": "npm run install:frontend && npm run install:backend",
+    "install:frontend": "cd src/frontend-oficiosya && npm install",
+    "install:backend": "cd src/OficiosYa.Web && dotnet restore",
+    "test": "npm run test:backend",
+    "test:backend": "cd src/OficiosYa.Web && dotnet test",
+    "migrate": "cd src/OficiosYa.Web && dotnet ef database update",
+    "migrate:add": "cd src/OficiosYa.Web && dotnet ef migrations add",
+    "clean": "npm run clean:frontend && npm run clean:backend",
+    "clean:frontend": "cd src/frontend-oficiosya && rm -rf node_modules dist",
+    "clean:backend": "cd src/OficiosYa.Web && dotnet clean"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  },
+  "keywords": [
+    "vue",
+    "dotnet",
+    "fullstack",
+    "profesionales",
+    "servicios"
+  ],
+  "author": "Tu Nombre",
+  "license": "MIT"
+}

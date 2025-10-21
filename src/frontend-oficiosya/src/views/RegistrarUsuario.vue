@@ -124,9 +124,8 @@
                   type="checkbox"
                   required
                 />
-                <span style="font-size: 14px;">
-                  Acepto los <a href="#" style="color: var(--brand);">términos y condiciones</a> 
-                  y la <a href="#" style="color: var(--brand);">política de privacidad</a>
+                <span style="font-size: 14px; line-height: 1.4; flex: 1;">
+                  Acepto los <a href="#" @click.prevent="abrirTerminos" style="color: var(--brand); text-decoration: underline;">términos y condiciones</a> y la <a href="#" @click.prevent="abrirPolitica" style="color: var(--brand); text-decoration: underline;">política de privacidad</a>
                 </span>
               </label>
               <span v-if="errores.aceptaTerminos" class="error">{{ errores.aceptaTerminos }}</span>
@@ -237,6 +236,16 @@ const irAHome = () => {
 
 const irALogin = () => {
   router.push(ROUTES.LOGIN)
+}
+
+const abrirTerminos = () => {
+  // Abrir términos y condiciones en nueva pestaña
+  window.open(ROUTES.TERMINOS, '_blank')
+}
+
+const abrirPolitica = () => {
+  // Abrir política de privacidad en nueva pestaña
+  window.open(ROUTES.POLITICA, '_blank')
 }
 </script>
 

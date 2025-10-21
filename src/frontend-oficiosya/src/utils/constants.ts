@@ -1,17 +1,39 @@
 // Constantes reutilizables de la aplicación
+export const CATEGORIAS_SERVICIO = {
+  OFICIANTE: [
+    { nombre: 'Plomero', icono: '🔧', descripcion: 'Instalación y reparación de sistemas de plomería' },
+    { nombre: 'Electricista', icono: '⚡', descripcion: 'Instalaciones y reparaciones eléctricas' },
+    { nombre: 'Albañil', icono: '🧱', descripcion: 'Construcción y reparación de estructuras' },
+    { nombre: 'Gasista', icono: '🔥', descripcion: 'Instalación y reparación de sistemas de gas' },
+    { nombre: 'Jardinero', icono: '🌿', descripcion: 'Mantenimiento de jardines y espacios verdes' },
+    { nombre: 'Pintor', icono: '🎨', descripcion: 'Pintura de interiores y exteriores' },
+    { nombre: 'Cerrajero', icono: '🔒', descripcion: 'Apertura de cerraduras y copias de llaves' },
+    { nombre: 'Carpintero', icono: '🪚', descripcion: 'Trabajos en madera y muebles' },
+    { nombre: 'Herrero', icono: '⚒️', descripcion: 'Trabajos en metal y herrería' },
+    { nombre: 'Técnico en Aire Acondicionado', icono: '❄️', descripcion: 'Instalación y reparación de sistemas de climatización' },
+    { nombre: 'Técnico en Refrigeración', icono: '🧊', descripcion: 'Reparación de heladeras y freezers' },
+    { nombre: 'Limpieza', icono: '🧹', descripcion: 'Servicios de limpieza doméstica y comercial' }
+  ],
+  PROFESIONAL: [
+    { nombre: 'Abogado', icono: '⚖️', descripcion: 'Servicios legales y asesoramiento jurídico' },
+    { nombre: 'Contador', icono: '📊', descripcion: 'Servicios contables y fiscales' },
+    { nombre: 'Médico', icono: '🩺', descripcion: 'Servicios de salud y atención médica' },
+    { nombre: 'Psicólogo', icono: '🧠', descripcion: 'Servicios de salud mental y terapia' },
+    { nombre: 'Dentista', icono: '🦷', descripcion: 'Servicios de salud dental' },
+    { nombre: 'Veterinario', icono: '🐕', descripcion: 'Servicios de salud animal' },
+    { nombre: 'Arquitecto', icono: '🏗️', descripcion: 'Diseño arquitectónico y planificación' },
+    { nombre: 'Ingeniero', icono: '⚙️', descripcion: 'Servicios de ingeniería y consultoría técnica' },
+    { nombre: 'Diseñador Gráfico', icono: '🎨', descripcion: 'Servicios de diseño visual y comunicación' },
+    { nombre: 'Traductor', icono: '🌐', descripcion: 'Servicios de traducción e interpretación' },
+    { nombre: 'Coach', icono: '🎯', descripcion: 'Servicios de coaching y desarrollo personal' },
+    { nombre: 'Nutricionista', icono: '🥗', descripcion: 'Servicios de nutrición y alimentación saludable' }
+  ]
+} as const
+
+// Mantener compatibilidad con código existente
 export const OFICIOS_DISPONIBLES = [
-  'Electricista',
-  'Plomero',
-  'Albañil',
-  'Gasista',
-  'Jardinero',
-  'Pintor',
-  'Cerrajero',
-  'Limpieza',
-  'Carpintero',
-  'Herrero',
-  'Técnico en Aire Acondicionado',
-  'Técnico en Refrigeración'
+  ...CATEGORIAS_SERVICIO.OFICIANTE.map(c => c.nombre),
+  ...CATEGORIAS_SERVICIO.PROFESIONAL.map(c => c.nombre)
 ] as const
 
 export const PROVINCIAS_ARGENTINA = [
@@ -102,9 +124,13 @@ export const MESSAGES = {
 // Rutas de la aplicación
 export const ROUTES = {
   HOME: '/',
+  OFICIANTES: '/oficiantes',
+  PROFESIONALES: '/profesionales',
   LOGIN: '/login',
   REGISTER: '/registrar',
   REGISTER_PROFESSIONAL: '/registrar-profesional',
   PROFILE: '/perfil',
-  DASHBOARD: '/dashboard'
+  DASHBOARD: '/dashboard',
+  TERMINOS: '/terminos-y-condiciones',
+  POLITICA: '/politica-de-privacidad'
 } as const

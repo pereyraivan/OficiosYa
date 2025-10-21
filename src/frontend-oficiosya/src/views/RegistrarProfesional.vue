@@ -185,17 +185,50 @@
                 ></textarea>
               </div>
 
+              <!-- Selección de Tipo de Servicio -->
               <div class="form-group">
-                <label>Oficios que realizás *</label>
+                <label style="margin-bottom: 12px; display: block; font-weight: 500;">
+                  ¿Qué tipo de servicio ofrecés? *
+                </label>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 20px;">
+                  <div
+                    class="tipo-servicio-option"
+                    :class="{ selected: tipoServicio === 'oficiante' }"
+                    @click="tipoServicio = 'oficiante'"
+                  >
+                    <div class="tipo-icon">🧰</div>
+                    <div class="tipo-content">
+                      <h3>Soy Oficiante</h3>
+                      <p>Plomero, Electricista, Albañil, etc.</p>
+                    </div>
+                  </div>
+                  <div
+                    class="tipo-servicio-option"
+                    :class="{ selected: tipoServicio === 'profesional' }"
+                    @click="tipoServicio = 'profesional'"
+                  >
+                    <div class="tipo-icon">💼</div>
+                    <div class="tipo-content">
+                      <h3>Soy Profesional</h3>
+                      <p>Abogado, Contador, Médico, etc.</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Selección de Oficios/Categorías -->
+              <div v-if="tipoServicio" class="form-group">
+                <label>Servicios que ofrecés *</label>
                 <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; margin-top: 8px;">
-                  <label v-for="oficio in OFICIOS_DISPONIBLES" :key="oficio" 
-                         style="display: flex; align-items: center; gap: 8px; cursor: pointer; padding: 8px; border: 1px solid #e2e8f0; border-radius: 6px; background: formulario.oficios.includes(oficio) ? '#e0f2fe' : 'white';">
+                  <label v-for="categoria in categoriasDisponibles" :key="categoria.nombre" 
+                         :style="`display: flex; align-items: center; gap: 8px; cursor: pointer; padding: 8px; border: 1px solid #e2e8f0; border-radius: 6px; background: ${formulario.oficios.includes(categoria.nombre) ? '#e0f2fe' : 'white'};`">
                     <input
                       v-model="formulario.oficios"
                       type="checkbox"
-                      :value="oficio"
+                      :value="categoria.nombre"
                     />
-                    <span>{{ oficio }}</span>
+                    <span class="oficio-icon">{{ categoria.icono }}</span>
+                    <span>{{ categoria.nombre }}</span>
                   </label>
                 </div>
                 <span v-if="errores.oficios" class="error">{{ errores.oficios }}</span>
@@ -210,9 +243,8 @@
                   type="checkbox"
                   required
                 />
-                <span style="font-size: 14px;">
-                  Acepto los <a href="#" style="color: var(--brand);">términos y condiciones</a> 
-                  y la <a href="#" style="color: var(--brand);">política de privacidad</a>
+                <span style="font-size: 14px; line-height: 1.4; flex: 1;">
+                  Acepto los <a href="#" @click.prevent="abrirTerminos" style="color: var(--brand); text-decoration: underline;">términos y condiciones</a> y la <a href="#" @click.prevent="abrirPolitica" style="color: var(--brand); text-decoration: underline;">política de privacidad</a>
                 </span>
               </label>
               <span v-if="errores.aceptaTerminos" class="error">{{ errores.aceptaTerminos }}</span>
@@ -249,11 +281,11 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { profesionalService } from '../services/profesionalService'
 import { useProfessionalRegistrationForm } from '../composables/useForm'
-import { OFICIOS_DISPONIBLES, PROVINCIAS_ARGENTINA, MESSAGES, ROUTES } from '../utils/constants'
+import { CATEGORIAS_SERVICIO, PROVINCIAS_ARGENTINA, MESSAGES, ROUTES } from '../utils/constants'
 
 const router = useRouter()
 
@@ -270,6 +302,17 @@ const {
 
 // Estado adicional
 const emailVerificando = ref(false)
+const tipoServicio = ref<'oficiante' | 'profesional' | null>(null)
+
+// Computed para categorías disponibles según el tipo seleccionado
+const categoriasDisponibles = computed(() => {
+  if (tipoServicio.value === 'oficiante') {
+    return CATEGORIAS_SERVICIO.OFICIANTE
+  } else if (tipoServicio.value === 'profesional') {
+    return CATEGORIAS_SERVICIO.PROFESIONAL
+  }
+  return []
+})
 
 // Métodos
 const verificarEmail = async () => {
@@ -329,6 +372,16 @@ const irAHome = () => {
 const irALogin = () => {
   router.push(ROUTES.LOGIN)
 }
+
+const abrirTerminos = () => {
+  // Abrir términos y condiciones en nueva pestaña
+  window.open(ROUTES.TERMINOS, '_blank')
+}
+
+const abrirPolitica = () => {
+  // Abrir política de privacidad en nueva pestaña
+  window.open(ROUTES.POLITICA, '_blank')
+}
 </script>
 
 <style scoped>
@@ -368,5 +421,54 @@ textarea:focus {
   outline: none;
   border-color: var(--brand);
   box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+/* Estilos para opciones de tipo de servicio */
+.tipo-servicio-option {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 20px;
+  border: 2px solid #e2e8f0;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  background: white;
+}
+
+.tipo-servicio-option:hover {
+  border-color: #cbd5e1;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.tipo-servicio-option.selected {
+  border-color: var(--brand);
+  background: #f0f9ff;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.tipo-icon {
+  font-size: 2.5rem;
+  line-height: 1;
+}
+
+.tipo-content h3 {
+  margin: 0 0 4px 0;
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.tipo-content p {
+  margin: 0;
+  font-size: 0.9rem;
+  color: #64748b;
+  line-height: 1.4;
+}
+
+.oficio-icon {
+  font-size: 1.2rem;
+  margin-right: 4px;
 }
 </style>
