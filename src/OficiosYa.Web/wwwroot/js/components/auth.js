@@ -1,5 +1,5 @@
 // Componente de autenticación
-import { usuarioService } from '../services/usuarioService';
+import { usuarioService } from '../services/usuarioService.js';
 export class AuthComponent {
     constructor() {
         this.loginForm = null;

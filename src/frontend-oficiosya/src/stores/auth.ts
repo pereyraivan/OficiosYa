@@ -12,18 +12,18 @@ export const useAuthStore = defineStore('auth', () => {
   // Getters
   const estaAutenticado = computed(() => !!token.value && !!usuario.value)
   const esProfesional = computed(() => usuario.value?.esProfesional || false)
+  const esAdmin = computed(() => usuario.value?.esAdmin || false)
 
   // Actions
-  const login = async (email: string, contraseña: string) => {
+  const login = async (email: string, password: string) => {
     cargando.value = true
     try {
-      const resultado = await usuarioService.login({ email, contraseña })
+      const resultado = await usuarioService.login({ email, password })
       usuario.value = resultado.usuario
       token.value = resultado.token
       localStorage.setItem('auth_token', resultado.token)
       return true
     } catch (error) {
-      console.error('Error en login:', error)
       return false
     } finally {
       cargando.value = false
@@ -37,7 +37,6 @@ export const useAuthStore = defineStore('auth', () => {
       usuario.value = nuevoUsuario
       return true
     } catch (error) {
-      console.error('Error en registro:', error)
       return false
     } finally {
       cargando.value = false
@@ -50,6 +49,14 @@ export const useAuthStore = defineStore('auth', () => {
     localStorage.removeItem('auth_token')
   }
 
+  const verificarEmail = async (email: string): Promise<boolean> => {
+    try {
+      return await usuarioService.verificarEmail(email)
+    } catch (error) {
+      return false
+    }
+  }
+
   const cargarPerfil = async () => {
     if (!token.value) return
 
@@ -58,7 +65,6 @@ export const useAuthStore = defineStore('auth', () => {
       const perfil = await usuarioService.obtenerPerfil()
       usuario.value = perfil
     } catch (error) {
-      console.error('Error cargando perfil:', error)
       logout()
     } finally {
       cargando.value = false
@@ -73,10 +79,12 @@ export const useAuthStore = defineStore('auth', () => {
     // Getters
     estaAutenticado,
     esProfesional,
+    esAdmin,
     // Actions
     login,
     registrar,
     logout,
-    cargarPerfil
+    cargarPerfil,
+    verificarEmail
   }
 })

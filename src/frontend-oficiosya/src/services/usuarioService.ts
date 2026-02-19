@@ -4,8 +4,9 @@ import type { Usuario, RegistrarUsuarioRequest, LoginRequest, ApiResponse } from
 export const usuarioService = {
   // Registrar nuevo usuario
   async registrar(usuario: RegistrarUsuarioRequest): Promise<Usuario> {
-    const response = await api.post<ApiResponse<Usuario>>('/usuarios/registrar', usuario)
-    return response.data.data
+    // El backend devuelve directamente el objeto UsuarioResponse
+    const response = await api.post<Usuario>('/usuarios/registrar', usuario)
+    return response.data
   },
 
   // Login de usuario
@@ -35,8 +36,8 @@ export const usuarioService = {
   // Verificar si el email está disponible
   async verificarEmail(email: string): Promise<boolean> {
     try {
-      await api.get(`/usuarios/verificar-email?email=${encodeURIComponent(email)}`)
-      return true
+      const response = await api.get<{ disponible: boolean }>(`/usuarios/verificar-email?email=${encodeURIComponent(email)}`)
+      return response.data.disponible
     } catch {
       return false
     }

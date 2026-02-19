@@ -49,8 +49,66 @@
       </div>
     </section>
 
+    <!-- Resultados de Búsqueda -->
+    <section v-if="mostrarResultados" class="section" style="padding: 80px 0; background: #f8fafc;">
+      <div class="container">
+        <div style="margin-bottom: 40px;">
+          <h2 style="font-size: 2rem; margin-bottom: 12px; color: var(--text);">
+            Resultados de búsqueda
+          </h2>
+          <p v-if="criteriosBusqueda.oficio || criteriosBusqueda.zona" style="color: var(--muted);">
+            <span v-if="criteriosBusqueda.oficio">Oficio: <strong>{{ criteriosBusqueda.oficio }}</strong></span>
+            <span v-if="criteriosBusqueda.oficio && criteriosBusqueda.zona"> • </span>
+            <span v-if="criteriosBusqueda.zona">Zona: <strong>{{ criteriosBusqueda.zona }}</strong></span>
+          </p>
+        </div>
+
+        <div v-if="cargandoResultados" style="text-align: center; padding: 60px 0;">
+          <div style="font-size: 1.2rem; color: var(--muted);">Buscando profesionales...</div>
+        </div>
+
+        <div v-else-if="resultadosBusqueda.length === 0" style="text-align: center; padding: 60px 0;">
+          <div style="font-size: 1.2rem; color: var(--muted); margin-bottom: 20px;">
+            No se encontraron profesionales con los criterios de búsqueda
+          </div>
+          <button class="cta" @click="limpiarBusqueda" style="background: var(--brand); color: white; border: none; padding: 12px 24px; border-radius: 8px; cursor: pointer;">
+            Ver todas las categorías
+          </button>
+        </div>
+
+        <div v-else class="resultados-grid">
+          <div
+            v-for="profesional in resultadosBusqueda"
+            :key="profesional.id"
+            class="profesional-card"
+          >
+            <div class="profesional-avatar">
+              {{ profesional.usuario?.nombre?.charAt(0) || 'P' }}
+            </div>
+            <div class="profesional-info">
+              <h3>{{ profesional.usuario?.nombre || 'Sin nombre' }}</h3>
+              <p class="profesional-oficio">
+                {{ profesional.oficios?.[0]?.nombre || 'Sin oficio especificado' }}
+              </p>
+              <p v-if="profesional.usuario?.ciudad" class="profesional-ubicacion">
+                📍 {{ profesional.usuario.ciudad }}
+              </p>
+              <div v-if="profesional.calificacionPromedio" class="profesional-rating">
+                <span class="stars">★★★★★</span>
+                <span class="rating-value">{{ profesional.calificacionPromedio.toFixed(1) }}</span>
+                <span class="rating-count">({{ profesional.totalResenas || 0 }} reseñas)</span>
+              </div>
+            </div>
+            <button class="btn-contactar" @click="contactarProfesional(profesional.id)">
+              Contactar
+            </button>
+          </div>
+        </div>
+      </div>
+    </section>
+
     <!-- Categorías de Oficiantes -->
-    <section class="section" style="padding: 80px 0; background: #f8fafc;">
+    <section v-if="!mostrarResultados" class="section" style="padding: 80px 0; background: #f8fafc;">
       <div class="container">
         <div style="text-align: center; margin-bottom: 60px;">
           <h2 style="font-size: 2.5rem; margin-bottom: 20px; color: var(--text);">
@@ -143,14 +201,31 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
-import { useRouter } from 'vue-router'
+import { ref, onMounted, computed } from 'vue'
+import { useRouter, useRoute } from 'vue-router'
 import { CATEGORIAS_SERVICIO } from '../utils/constants'
+import { profesionalService } from '../services/profesionalService'
+import type { Profesional } from '../types'
 
 const router = useRouter()
+const route = useRoute()
 
 // Estado del menú móvil
 const menuOpen = ref(false)
+
+// Estado de búsqueda
+const resultadosBusqueda = ref<Profesional[]>([])
+const cargandoResultados = ref(false)
+const criteriosBusqueda = ref({
+  oficio: '',
+  zona: '',
+  tipo: ''
+})
+
+// Computed para determinar si mostrar resultados
+const mostrarResultados = computed(() => {
+  return !!(criteriosBusqueda.value.oficio || criteriosBusqueda.value.zona)
+})
 
 // Métodos de navegación
 const irAInicio = () => {
@@ -179,9 +254,66 @@ const buscarOficiantes = () => {
 }
 
 const buscarPorCategoria = (categoria: string) => {
-  // Por ahora solo mostrar un alert, luego implementar búsqueda real
-  alert(`Buscando oficiantes de: ${categoria}`)
+  // Navegar a la búsqueda con la categoría seleccionada
+  router.push({
+    name: 'Oficiantes',
+    query: { oficio: categoria, tipo: 'oficiante' }
+  })
+  // Recargar la página para ejecutar la búsqueda
+  realizarBusqueda({ oficio: categoria, tipo: 'oficiante' })
 }
+
+// Realizar búsqueda de profesionales
+const realizarBusqueda = async (criterios: { oficio?: string; zona?: string; tipo?: string }) => {
+  if (!criterios.oficio && !criterios.zona) {
+    return
+  }
+
+  cargandoResultados.value = true
+  criteriosBusqueda.value = {
+    oficio: criterios.oficio || '',
+    zona: criterios.zona || '',
+    tipo: criterios.tipo || ''
+  }
+
+  try {
+    const resultados = await profesionalService.buscar({
+      oficio: criterios.oficio || undefined,
+      zona: criterios.zona || undefined
+    })
+    resultadosBusqueda.value = resultados || []
+  } catch (error: any) {
+    console.error('Error al buscar profesionales:', error)
+    resultadosBusqueda.value = []
+  } finally {
+    cargandoResultados.value = false
+  }
+}
+
+// Limpiar búsqueda y mostrar categorías
+const limpiarBusqueda = () => {
+  criteriosBusqueda.value = { oficio: '', zona: '', tipo: '' }
+  resultadosBusqueda.value = []
+  router.push({ name: 'Oficiantes' })
+}
+
+// Contactar profesional
+const contactarProfesional = (id: number) => {
+  // Por ahora solo mostrar un alert, luego implementar funcionalidad de contacto
+  alert(`Contactando al profesional con ID: ${id}`)
+}
+
+// Cargar parámetros de búsqueda al montar el componente
+onMounted(() => {
+  const query = route.query
+  if (query.oficio || query.zona) {
+    realizarBusqueda({
+      oficio: query.oficio as string,
+      zona: query.zona as string,
+      tipo: query.tipo as string || 'oficiante'
+    })
+  }
+})
 
 const toggleMenu = () => {
   menuOpen.value = !menuOpen.value
@@ -331,6 +463,107 @@ const closeMenu = () => {
   font-size: 1.5rem;
   color: var(--brand);
   transition: transform 0.3s ease;
+}
+
+/* Grid de resultados de búsqueda */
+.resultados-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 24px;
+  margin-top: 40px;
+}
+
+.profesional-card {
+  background: white;
+  border-radius: 12px;
+  padding: 24px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  transition: all 0.3s ease;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.profesional-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.15);
+}
+
+.profesional-avatar {
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  background: var(--brand);
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.5rem;
+  font-weight: 600;
+  margin: 0 auto;
+}
+
+.profesional-info {
+  text-align: center;
+}
+
+.profesional-info h3 {
+  font-size: 1.3rem;
+  margin-bottom: 8px;
+  color: var(--text);
+  font-weight: 600;
+}
+
+.profesional-oficio {
+  color: var(--brand);
+  font-weight: 500;
+  margin-bottom: 8px;
+}
+
+.profesional-ubicacion {
+  color: var(--muted);
+  font-size: 0.9rem;
+  margin-bottom: 8px;
+}
+
+.profesional-rating {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.stars {
+  color: #fbbf24;
+  font-size: 0.9rem;
+}
+
+.rating-value {
+  font-weight: 600;
+  color: var(--text);
+}
+
+.rating-count {
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.btn-contactar {
+  background: var(--brand);
+  color: white;
+  border: none;
+  padding: 12px 24px;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  margin-top: auto;
+}
+
+.btn-contactar:hover {
+  background: #2563eb;
+  transform: translateY(-1px);
 }
 
 /* Grid de pasos */

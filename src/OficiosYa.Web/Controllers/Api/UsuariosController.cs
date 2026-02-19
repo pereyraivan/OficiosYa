@@ -1,6 +1,10 @@
 using Microsoft.AspNetCore.Mvc;
-using OficiosYa.Web.Interfaces;
-using OficiosYa.Web.Models.DTOs;
+using MediatR;
+using OficiosYa.Application.DTOs.Request;
+using OficiosYa.Application.DTOs.Response;
+using OficiosYa.Application.UseCases.Usuarios.RegistrarUsuario;
+using OficiosYa.Application.UseCases.Usuarios.Login;
+using OficiosYa.Domain.Interfaces;
 
 namespace OficiosYa.Web.Controllers.Api
 {
@@ -8,11 +12,13 @@ namespace OficiosYa.Web.Controllers.Api
     [Route("api/[controller]")]
     public class UsuariosController : ControllerBase
     {
-        private readonly IUsuarioService _usuarioService;
+        private readonly IMediator _mediator;
+        private readonly IUsuarioRepository _usuarioRepository;
 
-        public UsuariosController(IUsuarioService usuarioService)
+        public UsuariosController(IMediator mediator, IUsuarioRepository usuarioRepository)
         {
-            _usuarioService = usuarioService;
+            _mediator = mediator;
+            _usuarioRepository = usuarioRepository;
         }
 
         [HttpPost("registrar")]
@@ -23,7 +29,8 @@ namespace OficiosYa.Web.Controllers.Api
                 return BadRequest(ModelState);
             }
 
-            var usuario = await _usuarioService.RegistrarUsuarioAsync(request);
+            var command = new RegistrarUsuarioCommand { Request = request };
+            var usuario = await _mediator.Send(command);
             
             if (usuario == null)
             {
@@ -41,7 +48,8 @@ namespace OficiosYa.Web.Controllers.Api
                 return BadRequest(ModelState);
             }
 
-            var response = await _usuarioService.LoginAsync(request);
+            var command = new LoginCommand { Request = request };
+            var response = await _mediator.Send(command);
             
             if (!response.Success)
             {
@@ -54,7 +62,7 @@ namespace OficiosYa.Web.Controllers.Api
         [HttpGet("{id}")]
         public async Task<IActionResult> ObtenerUsuario(int id)
         {
-            var usuario = await _usuarioService.ObtenerUsuarioPorIdAsync(id);
+            var usuario = await _usuarioRepository.GetByIdAsync(id);
             
             if (usuario == null)
             {
@@ -72,8 +80,8 @@ namespace OficiosYa.Web.Controllers.Api
                 return BadRequest(new { message = "El email es requerido" });
             }
 
-            var disponible = await _usuarioService.VerificarEmailDisponibleAsync(email);
-            return Ok(new { disponible });
+            var existe = await _usuarioRepository.EmailExistsAsync(email);
+            return Ok(new { disponible = !existe });
         }
     }
 }

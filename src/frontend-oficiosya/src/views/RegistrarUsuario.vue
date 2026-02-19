@@ -24,18 +24,33 @@
           </p>
 
           <form @submit.prevent="registrarUsuario">
-            <!-- Nombre -->
-            <div class="form-group">
-              <label for="nombre">Nombre completo *</label>
-              <input
-                id="nombre"
-                v-model="formulario.nombre"
-                type="text"
-                required
-                :class="{ 'error': errores.nombre }"
-                placeholder="Tu nombre completo"
-              />
-              <span v-if="errores.nombre" class="error">{{ errores.nombre }}</span>
+            <!-- Nombre y Apellido -->
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px;">
+              <div class="form-group">
+                <label for="nombre">Nombre *</label>
+                <input
+                  id="nombre"
+                  v-model="formulario.nombre"
+                  type="text"
+                  required
+                  :class="{ 'error': errores.nombre }"
+                  placeholder="Tu nombre"
+                />
+                <span v-if="errores.nombre" class="error">{{ errores.nombre }}</span>
+              </div>
+
+              <div class="form-group">
+                <label for="apellido">Apellido *</label>
+                <input
+                  id="apellido"
+                  v-model="formulario.apellido"
+                  type="text"
+                  required
+                  :class="{ 'error': errores.apellido }"
+                  placeholder="Tu apellido"
+                />
+                <span v-if="errores.apellido" class="error">{{ errores.apellido }}</span>
+              </div>
             </div>
 
             <!-- Email -->
@@ -117,15 +132,16 @@
             </div>
 
             <!-- Términos y condiciones -->
-            <div class="form-group">
-              <label style="display: flex; align-items: flex-start; gap: 8px; cursor: pointer;">
+            <div style="margin-bottom: 20px;">
+              <label class="terms-label">
                 <input
                   v-model="formulario.aceptaTerminos"
                   type="checkbox"
                   required
+                  class="terms-checkbox"
                 />
-                <span style="font-size: 14px; line-height: 1.4; flex: 1;">
-                  Acepto los <a href="#" @click.prevent="abrirTerminos" style="color: var(--brand); text-decoration: underline;">términos y condiciones</a> y la <a href="#" @click.prevent="abrirPolitica" style="color: var(--brand); text-decoration: underline;">política de privacidad</a>
+                <span class="terms-text">
+                  Acepto los <a href="#" @click.prevent="abrirTerminos" class="terms-link">términos y condiciones</a> y la <a href="#" @click.prevent="abrirPolitica" class="terms-link">política de privacidad</a>
                 </span>
               </label>
               <span v-if="errores.aceptaTerminos" class="error">{{ errores.aceptaTerminos }}</span>
@@ -197,7 +213,7 @@ const verificarEmail = async () => {
       setError('email', MESSAGES.ERROR.EMAIL_EXISTS)
     }
   } catch (error) {
-    console.error('Error verificando email:', error)
+    // Error silencioso
   } finally {
     emailVerificando.value = false
   }
@@ -210,8 +226,9 @@ const registrarUsuario = async () => {
     try {
       const datosUsuario = {
         nombre: formulario.nombre.trim(),
+        apellido: formulario.apellido.trim(),
         email: formulario.email.trim(),
-        contraseña: formulario.contraseña,
+        password: formulario.contraseña,
         telefono: formulario.telefono.trim() || undefined
       }
 
@@ -224,8 +241,7 @@ const registrarUsuario = async () => {
         setError('general', MESSAGES.ERROR.GENERAL)
       }
     } catch (error: any) {
-      console.error('Error en registro:', error)
-      setError('general', error.message || MESSAGES.ERROR.GENERAL)
+      setError('general', error.response?.data?.message || error.message || MESSAGES.ERROR.GENERAL)
     }
   }
 }
@@ -273,5 +289,44 @@ input.error {
 .cta:disabled {
   opacity: 0.6;
   cursor: not-allowed;
+}
+
+/* Estilos para términos y condiciones */
+.terms-label {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  cursor: pointer;
+  user-select: none;
+  line-height: 1.5;
+}
+
+.terms-checkbox {
+  margin: 0;
+  width: 18px;
+  height: 18px;
+  cursor: pointer;
+  accent-color: var(--brand);
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.terms-text {
+  font-size: 14px;
+  color: var(--text);
+  line-height: 1.6;
+  flex: 1;
+}
+
+.terms-link {
+  color: var(--brand);
+  text-decoration: underline;
+  font-weight: 500;
+  transition: color 0.2s ease;
+}
+
+.terms-link:hover {
+  color: var(--brand-600);
+  text-decoration: none;
 }
 </style>

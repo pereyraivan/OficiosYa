@@ -1,0 +1,17 @@
+﻿{
+   nombre: AgentTest,
+  apellido: User,
+  email: agent-repro-20251230@example.com,
+  password: Password123!,
+  telefono: +5493810000000,
+  direccion: Calle Falsa 123,
+  ciudad: San Miguel,
+  provincia: Tucumán,
+  codigoPostal: 4000,
+  descripcion: Prueba desde agente,
+  oficios: [Programador],
+  zonasCobertura: [ { localidad: San Miguel, provincia: Tucumán, latitud: -26.8, longitud: -65.2 } ],
+  metodoPago: MercadoPago,
+  codigoPago: TEST,
+  mesesSuscripcion: 1
+}

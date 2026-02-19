@@ -1,5 +1,5 @@
 // Componente de búsqueda de profesionales
-import { oficioService } from '../services/oficioService';
+import { oficioService } from '../services/oficioService.js';
 export class SearchComponent {
     constructor() {
         this.searchForm = null;

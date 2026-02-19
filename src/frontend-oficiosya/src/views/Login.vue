@@ -53,13 +53,14 @@
             </div>
 
             <!-- Recordarme -->
-            <div class="form-group">
-              <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+            <div style="margin-bottom: 20px;">
+              <label class="remember-me-label">
                 <input
                   v-model="formulario.recordarme"
                   type="checkbox"
+                  class="remember-me-checkbox"
                 />
-                <span style="font-size: 14px;">Recordarme</span>
+                <span class="remember-me-text">Recordarme</span>
               </label>
             </div>
 
@@ -162,6 +163,7 @@ const iniciarSesion = async () => {
   limpiarErrores()
 
   try {
+    // El store de auth espera email y password
     const exito = await authStore.login(formulario.email.trim(), formulario.contraseña)
     
     if (exito) {
@@ -172,8 +174,7 @@ const iniciarSesion = async () => {
       errores.general = 'Email o contraseña incorrectos'
     }
   } catch (error: any) {
-    console.error('Error en login:', error)
-    errores.general = error.message || 'Error al iniciar sesión. Intenta nuevamente.'
+    errores.general = error.response?.data?.message || error.message || 'Error al iniciar sesión. Intenta nuevamente.'
   } finally {
     cargando.value = false
   }
@@ -197,10 +198,6 @@ const irARegistro = () => {
   cursor: pointer;
 }
 
-input[type="checkbox"] {
-  margin: 0;
-}
-
 input.error {
   border-color: #ef4444;
 }
@@ -208,5 +205,29 @@ input.error {
 .cta:disabled {
   opacity: 0.6;
   cursor: not-allowed;
+}
+
+/* Estilos para Recordarme */
+.remember-me-label {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  user-select: none;
+}
+
+.remember-me-checkbox {
+  margin: 0;
+  width: 18px;
+  height: 18px;
+  cursor: pointer;
+  accent-color: var(--brand);
+  flex-shrink: 0;
+}
+
+.remember-me-text {
+  font-size: 14px;
+  color: var(--text);
+  font-weight: 500;
 }
 </style>

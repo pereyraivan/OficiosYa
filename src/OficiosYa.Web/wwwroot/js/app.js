@@ -1,6 +1,6 @@
 // Aplicación principal de OficiosYa
-import { usuarioService } from './services/usuarioService';
-import { oficioService } from './services/oficioService';
+import { usuarioService } from './services/usuarioService.js';
+import { oficioService } from './services/oficioService.js';
 export class OficiosYaApp {
     constructor() {
         this.oficios = [];

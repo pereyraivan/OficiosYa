@@ -1,4 +1,4 @@
-import { apiService } from './api';
+import { apiService } from './api.js';
 export class UsuarioService {
     constructor() {
         this.baseEndpoint = '/usuarios';

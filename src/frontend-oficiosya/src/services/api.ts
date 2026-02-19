@@ -1,15 +1,18 @@
 import axios from 'axios'
 import type { ApiResponse, ErrorResponse } from '../types'
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api'
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5230/api'
 
 // Configuración base de axios
 const api = axios.create({
   baseURL: API_BASE_URL,
-  timeout: 10000,
+  timeout: 60000, // 60 segundos para operaciones complejas (registro, carga de datos, etc.)
   headers: {
-    'Content-Type': 'application/json'
-  }
+    'Content-Type': 'application/json; charset=utf-8',
+    'Accept': 'application/json'
+  },
+  responseType: 'json',
+  responseEncoding: 'utf8'
 })
 
 // Interceptor para requests
@@ -39,9 +42,18 @@ api.interceptors.response.use(
       window.location.href = '/login'
     }
     
+    // Si el error no tiene response, es un error de red
+    if (!error.response) {
+      const networkError: ErrorResponse = {
+        message: error.message || 'Error de conexión. Verifica que el backend esté corriendo.',
+        errors: undefined
+      }
+      return Promise.reject(networkError)
+    }
+    
     // Formatear errores de la API
     const errorResponse: ErrorResponse = {
-      message: error.response?.data?.message || 'Error de conexión',
+      message: error.response?.data?.message || `Error ${error.response.status}: ${error.response.statusText}`,
       errors: error.response?.data?.errors
     }
     

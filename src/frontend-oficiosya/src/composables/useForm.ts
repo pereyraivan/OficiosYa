@@ -9,7 +9,7 @@ export interface FormField {
 
 export interface UseFormOptions {
   initialValues: Record<string, any>
-  validations?: Record<string, (value: any) => ValidationResult>
+  validations?: Record<string, (value: any, form?: Record<string, any>) => ValidationResult>
   onSubmit?: (values: Record<string, any>) => Promise<void> | void
 }
 
@@ -40,7 +40,7 @@ export function useForm(options: UseFormOptions) {
     const validator = validations[fieldName]
     if (!validator) return true
 
-    const result = validator(value)
+    const result = validator(value, form)
     if (!result.isValid && result.message) {
       errors[fieldName] = result.message
       return false
@@ -57,7 +57,9 @@ export function useForm(options: UseFormOptions) {
     const validationResults: Record<string, ValidationResult> = {}
     
     Object.entries(validations).forEach(([field, validator]) => {
-      validationResults[field] = validator(form[field])
+      // Pasar el valor del campo y el objeto form completo para validadores que lo necesiten
+      const result = validator(form[field], form)
+      validationResults[field] = result
     })
     
     const newErrors = validateFields(validationResults)
@@ -103,7 +105,6 @@ export function useForm(options: UseFormOptions) {
         await onSubmit(form)
         return true
       } catch (error: any) {
-        console.error('Error en submit:', error)
         setError('general', error.message || 'Ha ocurrido un error')
         return false
       } finally {
@@ -149,6 +150,7 @@ export function useUserRegistrationForm() {
   return useForm({
     initialValues: {
       nombre: '',
+      apellido: '',
       email: '',
       telefono: '',
       contraseña: '',
@@ -158,10 +160,16 @@ export function useUserRegistrationForm() {
     },
     validations: {
       nombre: (value) => validators.minLength(value, 2, 'El nombre'),
+      apellido: (value) => validators.minLength(value, 2, 'El apellido'),
       email: (value) => validators.email(value),
       telefono: (value) => validators.phone(value),
       contraseña: (value) => validators.password(value),
-      confirmarContraseña: (value, form) => validators.confirmPassword(form.contraseña, value),
+      confirmarContraseña: (value, form) => {
+        if (!form || !form.contraseña) {
+          return { isValid: false, message: 'Debes ingresar la contraseña primero' }
+        }
+        return validators.confirmPassword(form.contraseña, value)
+      },
       aceptaTerminos: (value) => validators.termsAccepted(value)
     }
   })
@@ -183,6 +191,7 @@ export function useProfessionalRegistrationForm() {
       codigoPostal: '',
       descripcion: '',
       oficios: [],
+      zonasCobertura: [],
       aceptaTerminos: false
     },
     validations: {
@@ -191,7 +200,12 @@ export function useProfessionalRegistrationForm() {
       email: (value) => validators.email(value),
       telefono: (value) => validators.phone(value),
       password: (value) => validators.password(value),
-      confirmarPassword: (value, form) => validators.confirmPassword(form.password, value),
+      confirmarPassword: (value, form) => {
+        if (!form || !form.password) {
+          return { isValid: false, message: 'Debes ingresar la contraseña primero' }
+        }
+        return validators.confirmPassword(form.password, value)
+      },
       ciudad: (value) => validators.required(value, 'La ciudad'),
       provincia: (value) => validators.required(value, 'La provincia'),
       oficios: (value) => validators.atLeastOne(value, 'Debes seleccionar al menos un oficio'),
