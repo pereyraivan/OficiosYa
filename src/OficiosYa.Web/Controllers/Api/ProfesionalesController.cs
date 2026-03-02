@@ -668,7 +668,8 @@ namespace OficiosYa.Web.Controllers.Api
                     .Include(p => p.ProfesionalCategorias)
                         .ThenInclude(pc => pc.CategoriaServicio)
                     .Include(p => p.Suscripciones)
-                    .Include(p => p.Resenas.Where(r => r.Activa).OrderByDescending(r => r.FechaCreacion).Take(2))
+                    .Include(p => p.Resenas)
+                        .ThenInclude(r => r.Usuario)
                     .Where(p => p.Activo && p.Disponible && p.Usuario != null);
 
                 // Filtrar por tipo de servicio si se especifica
@@ -740,7 +741,21 @@ namespace OficiosYa.Web.Controllers.Api
                             })
                             .ToList(),
                         certificados = new List<object>(),
-                        resenas = new List<object>()
+                        resenas = p.Resenas
+                            .Where(r => r.Activa)
+                            .OrderByDescending(r => r.FechaCreacion)
+                            .Take(2)
+                            .Select(r => new
+                            {
+                                id = r.Id,
+                                calificacion = r.Calificacion,
+                                comentario = r.Comentario ?? string.Empty,
+                                fechaCreacion = r.FechaCreacion.ToString("yyyy-MM-ddTHH:mm:ssZ"),
+                                nombreAutor = r.Usuario != null
+                                    ? (r.Usuario.Nombre ?? "") + " " + (r.Usuario.Apellido ?? "").Trim()
+                                    : (r.AutorNombre ?? "Anónimo")
+                            })
+                            .ToList()
                     })
                     .Where(p => p.usuario != null)
                     .ToList();

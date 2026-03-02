@@ -50,8 +50,11 @@
                     <div class="professional-details">{{ profesional.oficios?.[0]?.nombre || 'Electricista' }}</div>
                     <div class="professional-rating">
                       <span class="stars">★★★★★</span>
-                      <span class="rating-text">({{ profesional.resenas?.length || 32 }} reseñas)</span>
+                      <span class="rating-text">({{ profesional.totalResenas ?? 0 }} reseñas)</span>
                     </div>
+                    <p v-if="profesional.resenas?.length && profesional.resenas[0].comentario" class="professional-resena-preview">
+                      «{{ (profesional.resenas[0].comentario || '').slice(0, 60) }}{{ (profesional.resenas[0].comentario || '').length > 60 ? '…' : '' }}» — {{ profesional.resenas[0].nombreAutor || 'Cliente' }}
+                    </p>
                   </div>
                 </div>
               </div>
@@ -108,16 +111,19 @@
                 <div class="pro-head d-flex align-items-center mb-3">
                   <div class="avatar me-3"></div>
                   <div>
-                    <h6 class="card-title mb-1">{{ profesional.usuario.nombre }}</h6>
+                    <h6 class="card-title mb-1">{{ profesional.usuario?.nombre }}</h6>
                     <small class="text-muted">San Miguel de Tucumán · Tucumán</small>
                   </div>
                 </div>
                 <div class="mb-2">
                   <span class="stars">★★★★★</span> 
-                  <span class="ms-1">{{ profesional.calificacionPromedio.toFixed(1) }} ({{ profesional.resenas.length }})</span>
+                  <span class="ms-1">{{ (profesional.calificacionPromedio ?? 0).toFixed(1) }} ({{ profesional.totalResenas ?? 0 }} reseñas)</span>
                 </div>
+                <p v-if="profesional.resenas?.length && profesional.resenas[0].comentario" class="pro-resena-real small text-muted mb-2">
+                  «{{ (profesional.resenas[0].comentario || '').slice(0, 80) }}{{ (profesional.resenas[0].comentario || '').length > 80 ? '…' : '' }}» — {{ profesional.resenas[0].nombreAutor || 'Cliente' }}
+                </p>
                 <div class="small text-muted">
-                  Certificaciones: {{ profesional.certificados.length }}
+                  Certificaciones: {{ profesional.certificados?.length ?? 0 }}
                 </div>
               </div>
             </div>
@@ -419,7 +425,7 @@ const cargarProfesionalesDestacados = async () => {
         usuario: { id: 1, nombre: 'María López', email: 'maria@email.com', fechaRegistro: '2024-01-01', esProfesional: true, activo: true },
         oficios: [{ id: 1, nombre: 'Electricista', descripcion: '', activo: true, fechaCreacion: '2024-01-01' }],
         certificados: [],
-        resenas: Array(32).fill({})
+        resenas: []
       },
       {
         id: 2,
@@ -433,7 +439,7 @@ const cargarProfesionalesDestacados = async () => {
         usuario: { id: 2, nombre: 'Diego Pérez', email: 'diego@email.com', fechaRegistro: '2024-01-01', esProfesional: true, activo: true },
         oficios: [{ id: 2, nombre: 'Plomero', descripcion: '', activo: true, fechaCreacion: '2024-01-01' }],
         certificados: [],
-        resenas: Array(21).fill({})
+        resenas: []
       },
       {
         id: 3,
@@ -447,7 +453,7 @@ const cargarProfesionalesDestacados = async () => {
         usuario: { id: 3, nombre: 'Ana Rivas', email: 'ana@email.com', fechaRegistro: '2024-01-01', esProfesional: true, activo: true },
         oficios: [{ id: 3, nombre: 'Pintora', descripcion: '', activo: true, fechaCreacion: '2024-01-01' }],
         certificados: [],
-        resenas: Array(14).fill({})
+        resenas: []
       },
       {
         id: 4,
@@ -461,7 +467,7 @@ const cargarProfesionalesDestacados = async () => {
         usuario: { id: 4, nombre: 'Carlos Díaz', email: 'carlos@email.com', fechaRegistro: '2024-01-01', esProfesional: true, activo: true },
         oficios: [{ id: 4, nombre: 'Gasista', descripcion: '', activo: true, fechaCreacion: '2024-01-01' }],
         certificados: [],
-        resenas: Array(18).fill({})
+        resenas: []
       }
     ]
   }
@@ -671,6 +677,19 @@ onMounted(async () => {
 .rating-text {
   color: #64748b;
   font-size: 11px;
+}
+
+.professional-resena-preview {
+  font-size: 11px;
+  color: #64748b;
+  margin: 6px 0 0;
+  line-height: 1.3;
+  font-style: italic;
+}
+
+.pro-resena-real {
+  font-style: italic;
+  line-height: 1.35;
 }
 
 /* Asegurar que los profesionales se vean */
