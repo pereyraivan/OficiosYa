@@ -14,6 +14,8 @@ namespace OficiosYa.Application.DTOs.Response
         public DateTime FechaRegistro { get; set; }
         public bool EmailVerificado { get; set; }
         public bool Activo { get; set; }
+        public bool EsAdmin { get; set; }
+        public bool EsProfesional { get; set; }
         public string NombreCompleto => $"{Nombre} {Apellido}".Trim();
     }
 }

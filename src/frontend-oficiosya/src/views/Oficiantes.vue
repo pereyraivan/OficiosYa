@@ -1,32 +1,5 @@
 <template>
   <div class="oficiantes">
-    <!-- Header -->
-    <header>
-      <div class="container nav">
-        <div class="logo" @click="irAInicio" style="cursor: pointer;">
-          <div class="logo-badge">🛠️</div>
-          <span>OficiosYa</span>
-        </div>
-        
-        <!-- Menú hamburguesa para móviles -->
-        <button class="menu-toggle" @click="toggleMenu" :class="{ active: menuOpen }">
-          <span></span>
-          <span></span>
-          <span></span>
-        </button>
-        
-        <!-- Navegación -->
-        <nav class="navlinks" :class="{ active: menuOpen }">
-          <a href="#" @click="irAInicio; closeMenu()">Inicio</a>
-          <a href="#" @click="irAOficiantes; closeMenu()" class="active">Oficiantes</a>
-          <a href="#" @click="irAProfesionales; closeMenu()">Profesionales</a>
-          <a href="#como-funciona" @click="closeMenu">Cómo funciona</a>
-          <a href="#" @click="closeMenu">Ayuda</a>
-          <button class="cta" @click="irARegistro(); closeMenu()">Registrate</button>
-        </nav>
-      </div>
-    </header>
-
     <!-- Hero Section -->
     <section class="hero" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 80px 0;">
       <div class="container">
@@ -50,7 +23,7 @@
     </section>
 
     <!-- Resultados de Búsqueda -->
-    <section v-if="mostrarResultados" class="section" style="padding: 80px 0; background: #f8fafc;">
+    <section v-if="mostrarResultados" class="section section-fondo-publicar" style="padding: 80px 0;">
       <div class="container">
         <div style="margin-bottom: 40px;">
           <h2 style="font-size: 2rem; margin-bottom: 12px; color: var(--text);">
@@ -81,6 +54,7 @@
             v-for="profesional in resultadosBusqueda"
             :key="profesional.id"
             class="profesional-card"
+            @click="verPerfil(profesional.id)"
           >
             <div class="profesional-avatar">
               {{ profesional.usuario?.nombre?.charAt(0) || 'P' }}
@@ -99,8 +73,8 @@
                 <span class="rating-count">({{ profesional.totalResenas || 0 }} reseñas)</span>
               </div>
             </div>
-            <button class="btn-contactar" @click="contactarProfesional(profesional.id)">
-              Contactar
+            <button class="btn-contactar" @click.stop="verPerfil(profesional.id)">
+              Ver perfil
             </button>
           </div>
         </div>
@@ -108,7 +82,7 @@
     </section>
 
     <!-- Categorías de Oficiantes -->
-    <section v-if="!mostrarResultados" class="section" style="padding: 80px 0; background: #f8fafc;">
+    <section v-if="!mostrarResultados" class="section section-fondo-publicar" style="padding: 80px 0;">
       <div class="container">
         <div style="text-align: center; margin-bottom: 60px;">
           <h2 style="font-size: 2.5rem; margin-bottom: 20px; color: var(--text);">
@@ -189,8 +163,8 @@
         </div>
         <div>
           <strong>Legal</strong>
-          <div class="small" style="margin-top:8px"><a href="#" style="color:inherit">Términos</a></div>
-          <div class="small"><a href="#" style="color:inherit">Privacidad</a></div>
+          <div class="small" style="margin-top:8px"><RouterLink to="/terminos-y-condiciones" style="color:inherit; text-decoration:none">Términos y condiciones</RouterLink></div>
+          <div class="small"><RouterLink to="/politica-de-privacidad" style="color:inherit; text-decoration:none">Política de privacidad</RouterLink></div>
         </div>
       </div>
       <div class="container" style="padding:12px 0;border-top:1px solid #1f2937;color:#94a3b8">
@@ -203,29 +177,27 @@
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
+import { useAuthStore } from '../stores/auth'
 import { CATEGORIAS_SERVICIO } from '../utils/constants'
 import { profesionalService } from '../services/profesionalService'
 import type { Profesional } from '../types'
 
 const router = useRouter()
 const route = useRoute()
-
-// Estado del menú móvil
-const menuOpen = ref(false)
+const authStore = useAuthStore()
 
 // Estado de búsqueda
 const resultadosBusqueda = ref<Profesional[]>([])
 const cargandoResultados = ref(false)
+const busquedaRealizada = ref(false)
 const criteriosBusqueda = ref({
   oficio: '',
   zona: '',
   tipo: ''
 })
 
-// Computed para determinar si mostrar resultados
-const mostrarResultados = computed(() => {
-  return !!(criteriosBusqueda.value.oficio || criteriosBusqueda.value.zona)
-})
+// Mostrar resultados cuando ya se hizo al menos una búsqueda (lista todos o con filtros)
+const mostrarResultados = computed(() => busquedaRealizada.value)
 
 // Métodos de navegación
 const irAInicio = () => {
@@ -241,8 +213,25 @@ const irAProfesionales = () => {
   router.push('/')
 }
 
+const irAPublicarTrabajo = () => {
+  router.push('/publicar-trabajo')
+}
+
+const irABuscarEmpleos = () => {
+  router.push('/empleos')
+}
+
 const irARegistro = () => {
   router.push('/registrar-profesional')
+}
+
+const irALogin = () => {
+  router.push('/login')
+}
+
+const cerrarSesion = () => {
+  authStore.logout()
+  router.push('/')
 }
 
 const buscarOficiantes = () => {
@@ -263,12 +252,8 @@ const buscarPorCategoria = (categoria: string) => {
   realizarBusqueda({ oficio: categoria, tipo: 'oficiante' })
 }
 
-// Realizar búsqueda de profesionales
+// Realizar búsqueda de profesionales (sin filtros = listar todos)
 const realizarBusqueda = async (criterios: { oficio?: string; zona?: string; tipo?: string }) => {
-  if (!criterios.oficio && !criterios.zona) {
-    return
-  }
-
   cargandoResultados.value = true
   criteriosBusqueda.value = {
     oficio: criterios.oficio || '',
@@ -287,41 +272,31 @@ const realizarBusqueda = async (criterios: { oficio?: string; zona?: string; tip
     resultadosBusqueda.value = []
   } finally {
     cargandoResultados.value = false
+    busquedaRealizada.value = true
   }
 }
 
-// Limpiar búsqueda y mostrar categorías
+// Limpiar filtros y listar todos de nuevo
 const limpiarBusqueda = () => {
   criteriosBusqueda.value = { oficio: '', zona: '', tipo: '' }
-  resultadosBusqueda.value = []
   router.push({ name: 'Oficiantes' })
+  realizarBusqueda({ tipo: 'oficiante' })
 }
 
 // Contactar profesional
-const contactarProfesional = (id: number) => {
-  // Por ahora solo mostrar un alert, luego implementar funcionalidad de contacto
-  alert(`Contactando al profesional con ID: ${id}`)
+const verPerfil = (id: number) => {
+  router.push({ name: 'PerfilProfesional', params: { id: String(id) } })
 }
 
-// Cargar parámetros de búsqueda al montar el componente
+// Al montar: listar todos o aplicar filtros de la URL
 onMounted(() => {
   const query = route.query
-  if (query.oficio || query.zona) {
-    realizarBusqueda({
-      oficio: query.oficio as string,
-      zona: query.zona as string,
-      tipo: query.tipo as string || 'oficiante'
-    })
-  }
+  realizarBusqueda({
+    oficio: (query.oficio as string) || undefined,
+    zona: (query.zona as string) || undefined,
+    tipo: (query.tipo as string) || 'oficiante'
+  })
 })
-
-const toggleMenu = () => {
-  menuOpen.value = !menuOpen.value
-}
-
-const closeMenu = () => {
-  menuOpen.value = false
-}
 </script>
 
 <style scoped>
@@ -329,82 +304,8 @@ const closeMenu = () => {
   min-height: 100vh;
 }
 
-.logo {
-  cursor: pointer;
-}
-
-.navlinks a.active {
-  color: var(--brand);
-  font-weight: 600;
-}
-
-/* Estilos para el menú hamburguesa */
-.menu-toggle {
-  display: none;
-  flex-direction: column;
-  justify-content: space-around;
-  width: 30px;
-  height: 30px;
-  background: transparent;
-  border: none;
-  cursor: pointer;
-  padding: 0;
-  z-index: 1001;
-}
-
-.menu-toggle span {
-  width: 100%;
-  height: 3px;
-  background: var(--text);
-  border-radius: 2px;
-  transition: all 0.3s ease;
-  transform-origin: center;
-}
-
-.menu-toggle.active span:nth-child(1) {
-  transform: rotate(45deg) translate(6px, 6px);
-}
-
-.menu-toggle.active span:nth-child(2) {
-  opacity: 0;
-}
-
-.menu-toggle.active span:nth-child(3) {
-  transform: rotate(-45deg) translate(6px, -6px);
-}
-
-/* Navegación responsive */
-.navlinks {
-  display: flex;
-  align-items: center;
-  gap: 24px;
-}
-
-.navlinks a {
-  text-decoration: none;
-  color: var(--text);
-  font-weight: 500;
-  transition: color 0.2s ease;
-}
-
-.navlinks a:hover {
-  color: var(--brand);
-}
-
-.navlinks .cta {
-  background: var(--brand);
-  color: white;
-  border: none;
-  padding: 12px 24px;
-  border-radius: 8px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
-
-.navlinks .cta:hover {
-  background: #2563eb;
-  transform: translateY(-1px);
+.section-fondo-publicar {
+  background: linear-gradient(135deg, #f0fdf4 0%, #ecfdf5 50%, #f0f9ff 100%);
 }
 
 /* Grid de categorías */
@@ -482,6 +383,7 @@ const closeMenu = () => {
   display: flex;
   flex-direction: column;
   gap: 16px;
+  cursor: pointer;
 }
 
 .profesional-card:hover {
@@ -607,50 +509,6 @@ const closeMenu = () => {
 
 /* Responsive */
 @media (max-width: 768px) {
-  .menu-toggle {
-    display: flex;
-  }
-  
-  .navlinks {
-    position: fixed;
-    top: 0;
-    right: -100%;
-    width: 100%;
-    height: 100vh;
-    background: white;
-    flex-direction: column;
-    justify-content: center;
-    align-items: center;
-    gap: 32px;
-    transition: right 0.3s ease;
-    z-index: 1000;
-    box-shadow: -4px 0 20px rgba(0, 0, 0, 0.1);
-  }
-  
-  .navlinks.active {
-    right: 0;
-  }
-  
-  .navlinks a {
-    font-size: 1.2rem;
-    font-weight: 600;
-  }
-  
-  .navlinks .cta {
-    font-size: 1.1rem;
-    padding: 16px 32px;
-  }
-  
-  /* Ajustes para el header en móviles */
-  .nav {
-    position: relative;
-    z-index: 1002;
-  }
-  
-  .logo {
-    z-index: 1003;
-  }
-  
   .categorias-grid {
     grid-template-columns: 1fr;
   }
@@ -665,21 +523,6 @@ const closeMenu = () => {
   
   .hero p {
     font-size: 1rem !important;
-  }
-}
-
-@media (max-width: 480px) {
-  .navlinks {
-    gap: 24px;
-  }
-  
-  .navlinks a {
-    font-size: 1.1rem;
-  }
-  
-  .navlinks .cta {
-    font-size: 1rem;
-    padding: 14px 28px;
   }
 }
 </style>

@@ -1,112 +1,77 @@
 <template>
   <div class="politica-privacidad">
-    <!-- Header -->
-    <header>
-      <div class="container nav">
-        <div class="logo" @click="irAHome">
-          <div class="logo-badge">🛠️</div>
-          <span>OficiosYa</span>
-        </div>
-        <nav class="navlinks">
-          <a href="#" @click="irAHome">Inicio</a>
-          <a href="#" @click="irARegistro">Registrarse</a>
-        </nav>
-      </div>
-    </header>
-
-    <!-- Contenido -->
     <section class="section" style="background: #f8fafc; min-height: calc(100vh - 80px);">
       <div class="container" style="max-width: 800px; padding-top: 40px;">
         <div class="card" style="padding: 40px;">
           <h1 style="text-align: center; margin-bottom: 30px;">Política de Privacidad</h1>
-          
           <div style="text-align: center; margin-bottom: 30px; color: var(--muted);">
             <p>Última actualización: {{ fechaActualizacion }}</p>
           </div>
 
           <div class="content" style="line-height: 1.6;">
-            <h2>1. Información que Recopilamos</h2>
-            <p>Recopilamos información que usted nos proporciona directamente, incluyendo:</p>
+            <h2>1. Responsable del Tratamiento</h2>
+            <p>El responsable del tratamiento de sus datos personales en el marco de la plataforma OficiosYa es la persona física o jurídica que opera la plataforma (en adelante, “OficiosYa” o “nosotros”). Para ejercer sus derechos o consultas sobre privacidad puede contactarnos en: <strong>privacidad@oficiosya.com</strong>, o en la dirección que se indique en la plataforma (Argentina).</p>
+            <p>Esta política se enmarca en la <strong>Ley 25.326 de Protección de Datos Personales</strong> (Argentina) y en las disposiciones de la Dirección Nacional de Protección de Datos Personales (DNPDP).</p>
+
+            <h2>2. Información que Recopilamos</h2>
+            <p>Recopilamos la información que usted nos proporciona al registrarse y usar la plataforma, incluyendo:</p>
             <ul>
-              <li><strong>Información de registro:</strong> Nombre, apellido, email, teléfono, dirección</li>
-              <li><strong>Información profesional:</strong> Especialidades, certificaciones, experiencia</li>
-              <li><strong>Información de transacciones:</strong> Historial de servicios, pagos</li>
-              <li><strong>Comunicaciones:</strong> Mensajes entre clientes y profesionales</li>
+              <li><strong>Datos de registro y cuenta:</strong> Nombre, apellido, email, teléfono, contraseña (almacenada de forma segura), dirección, ciudad, provincia, código postal.</li>
+              <li><strong>Datos de perfil profesional (si aplica):</strong> Descripción, oficios o categorías, zonas de cobertura, fotos de perfil y de trabajos, certificados o documentos que suba.</li>
+              <li><strong>Datos de uso:</strong> Interacciones con la plataforma, búsquedas, perfiles visitados, reseñas que publique.</li>
+              <li><strong>Datos de suscripción y pago (si aplica):</strong> Plan elegido, método de pago, datos necesarios para facturación o procesamiento de pagos.</li>
             </ul>
 
-            <h2>2. Cómo Utilizamos su Información</h2>
-            <p>Utilizamos su información para:</p>
+            <h2>3. Finalidades del Tratamiento</h2>
+            <p>Utilizamos sus datos para:</p>
             <ul>
-              <li>Proporcionar y mejorar nuestros servicios</li>
-              <li>Conectar clientes con profesionales apropiados</li>
-              <li>Procesar pagos y transacciones</li>
-              <li>Comunicarnos con usted sobre servicios y actualizaciones</li>
-              <li>Garantizar la seguridad de la plataforma</li>
-              <li>Cumplir con obligaciones legales</li>
+              <li>Gestionar su cuenta y permitir el uso de la plataforma como intermediario entre quienes buscan y quienes ofrecen servicios.</li>
+              <li>Mostrar perfiles de profesionales a los usuarios (nombre, oficios, zona, descripción, fotos, reseñas, etc.) según la configuración de visibilidad.</li>
+              <li>Gestionar suscripciones, pagos y facturación cuando corresponda.</li>
+              <li>Comunicarnos con usted (soporte, notificaciones importantes, novedades del servicio, si ha dado su consentimiento).</li>
+              <li>Garantizar la seguridad, prevenir fraudes y cumplir obligaciones legales.</li>
+              <li>Mejorar nuestros servicios y la experiencia de uso (incluyendo análisis agregados y anónimos).</li>
             </ul>
 
-            <h2>3. Compartir Información</h2>
-            <p>No vendemos su información personal. Podemos compartir información en las siguientes circunstancias:</p>
+            <h2>4. Base Legal y Consentimiento</h2>
+            <p>El tratamiento se basa en su consentimiento (al registrarse y aceptar esta política), en la ejecución del contrato de uso de la plataforma y, cuando corresponda, en el cumplimiento de obligaciones legales. Para envíos comerciales o comunicaciones promocionales solicitamos su consentimiento y puede revocarlo en cualquier momento.</p>
+
+            <h2>5. Compartición de Datos</h2>
+            <p><strong>No vendemos sus datos personales.</strong> Podemos compartir información:</p>
             <ul>
-              <li><strong>Con profesionales:</strong> Para facilitar la conexión de servicios</li>
-              <li><strong>Proveedores de servicios:</strong> Para procesar pagos y operaciones</li>
-              <li><strong>Cumplimiento legal:</strong> Cuando sea requerido por ley</li>
-              <li><strong>Consentimiento:</strong> Cuando usted nos dé su consentimiento explícito</li>
+              <li><strong>Entre usuarios de la plataforma:</strong> Para que la intermediación funcione (por ejemplo, que los clientes vean el perfil, contacto o reseñas de los profesionales).</li>
+              <li><strong>Con proveedores de servicios:</strong> Hosting, email, pasarelas de pago, herramientas de análisis, siempre con obligaciones de confidencialidad y uso limitado.</li>
+              <li><strong>Por obligación legal:</strong> Cuando lo exija la ley o una autoridad competente.</li>
+              <li><strong>Con su consentimiento:</strong> En otros casos que le informemos y para los que solicitemos su autorización expresa.</li>
             </ul>
 
-            <h2>4. Seguridad de los Datos</h2>
-            <p>Implementamos medidas de seguridad técnicas y organizativas para proteger su información:</p>
-            <ul>
-              <li>Encriptación de datos sensibles</li>
-              <li>Acceso restringido a información personal</li>
-              <li>Monitoreo regular de seguridad</li>
-              <li>Capacitación del personal en privacidad</li>
-            </ul>
+            <h2>6. Seguridad y Retención</h2>
+            <p>Aplicamos medidas técnicas y organizativas para proteger sus datos (acceso restringido, cifrado donde corresponda, buenas prácticas). Conservamos la información mientras sea necesaria para las finalidades indicadas y para cumplir obligaciones legales o resolver disputas; después se elimina o anonimiza.</p>
 
-            <h2>5. Sus Derechos</h2>
+            <h2>7. Sus Derechos (Ley 25.326)</h2>
             <p>Usted tiene derecho a:</p>
             <ul>
-              <li><strong>Acceso:</strong> Solicitar una copia de su información personal</li>
-              <li><strong>Rectificación:</strong> Corregir información inexacta</li>
-              <li><strong>Eliminación:</strong> Solicitar la eliminación de su información</li>
-              <li><strong>Limitación:</strong> Restringir el procesamiento de su información</li>
-              <li><strong>Portabilidad:</strong> Recibir su información en formato estructurado</li>
-              <li><strong>Oposición:</strong> Oponerse al procesamiento de su información</li>
+              <li><strong>Acceso:</strong> Conocer qué datos tenemos sobre usted y obtener una copia.</li>
+              <li><strong>Rectificación:</strong> Corregir datos inexactos o incompletos.</li>
+              <li><strong>Supresión:</strong> Solicitar la eliminación de sus datos cuando la ley lo permita.</li>
+              <li><strong>Oposición y limitación:</strong> Oponerse a ciertos tratamientos o solicitar su limitación en los casos previstos por la ley.</li>
             </ul>
+            <p>Para ejercer estos derechos, escriba a <strong>privacidad@oficiosya.com</strong> indicando su solicitud. También puede acudir a la <strong>Dirección Nacional de Protección de Datos Personales (DNPDP)</strong> para presentar quejas o reclamos: <a href="https://www.argentina.gob.ar/justicia/datospersonales" target="_blank" rel="noopener">argentina.gob.ar/justicia/datospersonales</a>.</p>
 
-            <h2>6. Cookies y Tecnologías Similares</h2>
-            <p>Utilizamos cookies y tecnologías similares para:</p>
-            <ul>
-              <li>Mejorar la funcionalidad del sitio web</li>
-              <li>Recordar sus preferencias</li>
-              <li>Analizar el uso del sitio</li>
-              <li>Personalizar su experiencia</li>
-            </ul>
+            <h2>8. Cookies y Tecnologías Similares</h2>
+            <p>Utilizamos cookies y tecnologías similares para el funcionamiento del sitio, recordar preferencias, seguridad y, si usted lo acepta, para análisis de uso. Puede configurar su navegador para rechazar cookies; parte del sitio podría no funcionar correctamente.</p>
 
-            <h2>7. Retención de Datos</h2>
-            <p>Conservamos su información personal durante el tiempo necesario para:</p>
-            <ul>
-              <li>Cumplir con los propósitos para los cuales fue recopilada</li>
-              <li>Cumplir con obligaciones legales</li>
-              <li>Resolver disputas</li>
-              <li>Hacer cumplir nuestros acuerdos</li>
-            </ul>
-
-            <h2>8. Transferencias Internacionales</h2>
-            <p>Su información puede ser transferida y procesada en países fuera de Argentina. Nos aseguramos de que dichas transferencias cumplan con las leyes de protección de datos aplicables.</p>
-
-            <h2>9. Menores de Edad</h2>
-            <p>Nuestros servicios no están dirigidos a menores de 18 años. No recopilamos intencionalmente información personal de menores de edad.</p>
+            <h2>9. Menores</h2>
+            <p>La plataforma no está dirigida a menores de 18 años. No recopilamos datos de menores de forma voluntaria; si tomamos conocimiento de que se han proporcionado datos de un menor, procederemos a eliminar dicha información.</p>
 
             <h2>10. Cambios a esta Política</h2>
-            <p>Podemos actualizar esta política de privacidad ocasionalmente. Le notificaremos sobre cambios significativos a través de la plataforma o por email.</p>
+            <p>Podemos actualizar esta Política de Privacidad. Los cambios se publicarán en esta página con la nueva fecha de “Última actualización”. Le recomendamos revisarla periódicamente. Para cambios sustanciales podremos notificar por email o mediante un aviso destacado en la plataforma.</p>
 
             <h2>11. Contacto</h2>
-            <p>Para preguntas sobre esta política de privacidad o para ejercer sus derechos, puede contactarnos en:</p>
+            <p>Para consultas sobre privacidad o para ejercer sus derechos:</p>
             <ul>
-              <li>Email: privacidad@oficiosya.com</li>
-              <li>Teléfono: +54 381 123-4567</li>
-              <li>Dirección: San Miguel de Tucumán, Argentina</li>
+              <li>Email: <strong>privacidad@oficiosya.com</strong></li>
+              <li>Dirección: San Miguel de Tucumán, Argentina (o la que se indique en la plataforma)</li>
             </ul>
           </div>
 

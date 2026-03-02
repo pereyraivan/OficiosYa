@@ -33,13 +33,11 @@ export const usuarioService = {
     return response.data.data
   },
 
-  // Verificar si el email está disponible
+  // Verificar si el email está disponible (consulta la tabla Usuarios en el backend).
+  // Solo devuelve false cuando la API responde 200 con disponible: false.
+  // Si hay error de red o de servidor, lanza para no confundir con "ya registrado".
   async verificarEmail(email: string): Promise<boolean> {
-    try {
-      const response = await api.get<{ disponible: boolean }>(`/usuarios/verificar-email?email=${encodeURIComponent(email)}`)
-      return response.data.disponible
-    } catch {
-      return false
-    }
+    const response = await api.get<{ disponible: boolean }>(`/usuarios/verificar-email?email=${encodeURIComponent(email)}`)
+    return response.data?.disponible ?? true
   }
 }

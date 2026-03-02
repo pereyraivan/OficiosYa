@@ -36,8 +36,8 @@ api.interceptors.response.use(
     return response
   },
   (error) => {
-    // Manejar errores de autenticación
-    if (error.response?.status === 401) {
+    // Manejar errores de autenticación (no redirigir si el 401 viene del login)
+    if (error.response?.status === 401 && !error.config?.url?.includes('/login')) {
       localStorage.removeItem('auth_token')
       window.location.href = '/login'
     }

@@ -9,8 +9,12 @@ namespace OficiosYa.Domain.Entities
         [Required]
         public int ProfesionalId { get; set; }
 
-        [Required]
-        public int UsuarioId { get; set; }
+        /// <summary>Opcional: si es null, la reseña es de un visitante y se usa AutorNombre.</summary>
+        public int? UsuarioId { get; set; }
+
+        /// <summary>Nombre con el que firma la reseña (obligatorio cuando no hay usuario logueado).</summary>
+        [StringLength(100)]
+        public string? AutorNombre { get; set; }
 
         [Required]
         [Range(1, 5)]
@@ -25,7 +29,7 @@ namespace OficiosYa.Domain.Entities
 
         // Navegación
         public virtual Profesional Profesional { get; set; } = null!;
-        public virtual Usuario Usuario { get; set; } = null!;
+        public virtual Usuario? Usuario { get; set; }
 
         // Métodos de dominio
         public void Desactivar()

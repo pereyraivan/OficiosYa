@@ -9,7 +9,6 @@
         </div>
         <nav class="navlinks">
           <a href="#" @click="irAHome">Inicio</a>
-          <a href="#" @click="irARegistro">Crear cuenta</a>
         </nav>
       </div>
     </header>
@@ -83,7 +82,7 @@
             <div style="text-align: center; margin-top: 20px;">
               <span class="small">¿No tenés cuenta? </span>
               <a href="#" @click="irARegistro" style="color: var(--brand); font-weight: 500;">
-                Crear cuenta
+                Registrate como profesional u oficiante
               </a>
             </div>
 
@@ -185,7 +184,7 @@ const irAHome = () => {
 }
 
 const irARegistro = () => {
-  router.push('/registrar')
+  router.push('/registrar-profesional')
 }
 </script>
 

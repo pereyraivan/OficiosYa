@@ -207,13 +207,14 @@ const verificarEmail = async () => {
   }
 
   emailVerificando.value = true
+  setError('email', '')
   try {
     const disponible = await authStore.verificarEmail(formulario.email)
-    if (!disponible) {
+    if (disponible === false) {
       setError('email', MESSAGES.ERROR.EMAIL_EXISTS)
     }
-  } catch (error) {
-    // Error silencioso
+  } catch {
+    setError('email', 'No se pudo verificar el email. Revisá la conexión o intentá más tarde.')
   } finally {
     emailVerificando.value = false
   }

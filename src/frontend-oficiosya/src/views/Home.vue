@@ -1,37 +1,5 @@
 <template>
   <div class="home">
-    <!-- Header -->
-    <header>
-      <div class="container nav">
-        <div class="logo" @click="irAInicio" style="cursor: pointer;">
-          <div class="logo-badge">🛠️</div>
-          <span>OficiosYa</span>
-        </div>
-        
-        <!-- Menú hamburguesa para móviles -->
-        <button 
-          class="menu-toggle" 
-          type="button" 
-          @click="toggleMenu"
-          :class="{ 'active': menuOpen }"
-        >
-          <span></span>
-          <span></span>
-          <span></span>
-        </button>
-        
-        <!-- Navegación -->
-        <nav class="navlinks" :class="{ 'active': menuOpen }">
-          <a href="#inicio" @click="closeMenu">Inicio</a>
-          <a href="#" @click="cambiarTipoBusqueda('oficiante'); closeMenu()" :class="{ 'active': tipoBusqueda === 'oficiante' }">Oficiantes</a>
-          <a href="#" @click="cambiarTipoBusqueda('profesional'); closeMenu()" :class="{ 'active': tipoBusqueda === 'profesional' }">Profesionales</a>
-          <a href="#como-funciona" @click="closeMenu">Cómo funciona</a>
-          <a href="#" @click="closeMenu">Ayuda</a>
-          <button class="cta" @click="irARegistro(); closeMenu()">Registrate</button>
-        </nav>
-      </div>
-    </header>
-
     <!-- Hero Section -->
     <section class="hero bg-primary text-white py-5" id="inicio">
       <div class="container">
@@ -54,7 +22,6 @@
                   :options="opcionesDropdown"
                   :placeholder="cargandoCategorias ? 'Cargando...' : 'Buscar oficio o categoría'"
                   :disabled="cargandoCategorias"
-                  default-option="Todos los oficios"
                 />
                 <CiudadAutocomplete
                   v-model="busqueda.zona"
@@ -76,11 +43,11 @@
               <span class="verified-badge">Nuevos perfiles verificados</span>
               <h3 class="professionals-title">Profesionales cerca tuyo</h3>
               <div class="professionals-grid">
-                <div v-for="profesional in profesionalesDestacados" :key="profesional.id" class="professional-card">
+                <div v-for="profesional in profesionalesDestacados" :key="profesional.id" class="professional-card" @click="verPerfil(profesional.id)">
                   <div class="professional-avatar"></div>
                   <div class="professional-info">
-                    <div class="professional-name">{{ profesional.usuario.nombre }}</div>
-                    <div class="professional-details">{{ profesional.oficios[0]?.nombre || 'Electricista' }}</div>
+                    <div class="professional-name">{{ profesional.usuario?.nombre }}</div>
+                    <div class="professional-details">{{ profesional.oficios?.[0]?.nombre || 'Electricista' }}</div>
                     <div class="professional-rating">
                       <span class="stars">★★★★★</span>
                       <span class="rating-text">({{ profesional.resenas?.length || 32 }} reseñas)</span>
@@ -135,7 +102,7 @@
         <h2 class="text-center mb-3">Profesionales destacados</h2>
         <p class="text-center text-muted mb-5">Perfiles completos, con certificaciones y excelentes reseñas.</p>
         <div class="row g-4">
-          <div class="col-lg-4 col-md-6" v-for="profesional in profesionalesDestacados" :key="profesional.id">
+          <div class="col-lg-4 col-md-6" v-for="profesional in profesionalesDestacados" :key="profesional.id" @click="verPerfil(profesional.id)" style="cursor: pointer;">
             <div class="pro card h-100">
               <div class="card-body">
                 <div class="pro-head d-flex align-items-center mb-3">
@@ -217,8 +184,8 @@
         </div>
         <div>
           <strong>Legal</strong>
-          <div class="small" style="margin-top:8px"><a href="#" style="color:inherit">Términos</a></div>
-          <div class="small"><a href="#" style="color:inherit">Privacidad</a></div>
+          <div class="small" style="margin-top:8px"><RouterLink to="/terminos-y-condiciones" style="color:inherit; text-decoration:none">Términos y condiciones</RouterLink></div>
+          <div class="small"><RouterLink to="/politica-de-privacidad" style="color:inherit; text-decoration:none">Política de privacidad</RouterLink></div>
         </div>
       </div>
       <div class="container" style="padding:12px 0;border-top:1px solid #1f2937;color:#94a3b8">
@@ -229,8 +196,9 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
-import { useRouter } from 'vue-router'
+import { ref, computed, onMounted, watch } from 'vue'
+import { useRouter, useRoute } from 'vue-router'
+import { useAuthStore } from '../stores/auth'
 import { profesionalService } from '../services/profesionalService'
 import { CATEGORIAS_SERVICIO } from '../utils/constants'
 import CiudadAutocomplete from '../components/CiudadAutocomplete.vue'
@@ -239,6 +207,8 @@ import type { Profesional } from '../types'
 import type { CiudadSugerida } from '../services/geocodingService'
 
 const router = useRouter()
+const route = useRoute()
+const authStore = useAuthStore()
 
 // Estado reactivo
 const busqueda = ref({
@@ -247,7 +217,6 @@ const busqueda = ref({
 })
 
 const profesionalesDestacados = ref<Profesional[]>([])
-const menuOpen = ref(false)
 const tipoBusqueda = ref<'oficiante' | 'profesional'>('oficiante')
 const categoriasCargadas = ref<Array<{ id: number; nombre: string; tipo: string; icono?: string }>>([])
 const cargandoCategorias = ref(false)
@@ -255,15 +224,9 @@ const cargandoCategorias = ref(false)
 // Opciones del dropdown según el tipo de búsqueda - cargadas desde el backend
 const opcionesDropdown = computed(() => {
   const tipo = tipoBusqueda.value === 'oficiante' ? 'Oficiante' : 'Profesional'
-  const opciones = categoriasCargadas.value
+  return categoriasCargadas.value
     .filter(c => c.tipo === tipo)
     .map(c => c.nombre)
-  
-  // Agregar opción "Todos los oficios" al inicio si hay opciones
-  if (opciones.length > 0) {
-    return ['Todos los oficios', ...opciones]
-  }
-  return ['Todos los oficios']
 })
 
 // Datos estáticos
@@ -282,7 +245,7 @@ const pasos = ref([
   {
     numero: 1,
     titulo: 'Paso 1',
-    descripcion: 'Usá el buscador o elegí una categoría. Podrás filtrar por distancia, precio y valoración.',
+    descripcion: 'Usá el buscador o elegí una categoría. Podrás filtrar por distancia y valoración.',
     badgeStyle: 'background:#e0f2fe;color:#075985'
   },
   {
@@ -294,7 +257,7 @@ const pasos = ref([
   {
     numero: 3,
     titulo: 'Paso 3',
-    descripcion: 'Enviá un mensaje o pedí presupuesto sin compromiso. ¡Listo!',
+    descripcion: 'Contactate por WhatsApp o por email y pedí tu presupuesto sin compromiso. ¡Listo!',
     badgeStyle: 'background:#fef9c3;color:#854d0e'
   }
 ])
@@ -325,22 +288,10 @@ const onCiudadSeleccionada = (ciudad: CiudadSugerida) => {
 
 const buscarProfesionales = async () => {
   try {
-    // Validar que al menos haya un criterio de búsqueda
-    if (!busqueda.value.oficio && !busqueda.value.zona) {
-      alert('Por favor, seleccioná un oficio o ingresá una zona para buscar')
-      return
-    }
-
-    // Construir los parámetros de búsqueda
+    // Construir los parámetros de búsqueda (sin oficio/zona se listan todos)
     const params: any = {}
-    
-    if (busqueda.value.oficio && busqueda.value.oficio !== 'Todos los oficios') {
-      params.oficio = busqueda.value.oficio
-    }
-    
-    if (busqueda.value.zona) {
-      params.zona = busqueda.value.zona
-    }
+    if (busqueda.value.oficio) params.oficio = busqueda.value.oficio
+    if (busqueda.value.zona) params.zona = busqueda.value.zona
     
     // Agregar el tipo de búsqueda (oficiante o profesional)
     params.tipo = tipoBusqueda.value
@@ -360,6 +311,19 @@ const irARegistro = () => {
   router.push('/registrar-profesional')
 }
 
+const irALogin = () => {
+  router.push('/login')
+}
+
+const cerrarSesion = () => {
+  authStore.logout()
+  router.push('/')
+}
+
+const verPerfil = (id: number) => {
+  router.push({ name: 'PerfilProfesional', params: { id: String(id) } })
+}
+
 const irAInicio = () => {
   document.getElementById('inicio')?.scrollIntoView({ behavior: 'smooth' })
 }
@@ -368,26 +332,19 @@ const irAOficiantes = () => {
   router.push('/oficiantes')
 }
 
-const toggleMenu = () => {
-  menuOpen.value = !menuOpen.value
+const irAPublicarTrabajo = () => {
+  router.push('/publicar-trabajo')
 }
 
-const closeMenu = () => {
-  menuOpen.value = false
+const irABuscarEmpleos = () => {
+  router.push('/empleos')
 }
 
 const cambiarTipoBusqueda = async (tipo: 'oficiante' | 'profesional') => {
   tipoBusqueda.value = tipo
-  // Recargar categorías del nuevo tipo
+  busqueda.value.oficio = '' // Sin filtro por defecto, se listan todos
   await cargarCategorias(tipo === 'oficiante' ? 'Oficiante' : 'Profesional')
-  // Recargar profesionales destacados del nuevo tipo
   await cargarProfesionalesDestacados()
-  // Cambiar el oficio seleccionado al primer elemento de la nueva categoría
-  if (opcionesDropdown.value.length > 0) {
-    busqueda.value.oficio = opcionesDropdown.value[0]
-  } else {
-    busqueda.value.oficio = ''
-  }
 }
 
 const cargarCategorias = async (tipo?: 'Oficiante' | 'Profesional') => {
@@ -418,8 +375,6 @@ const cargarCategorias = async (tipo?: 'Oficiante' | 'Profesional') => {
         }))
       }
     }
-    
-    // No establecer un oficio por defecto, dejar "Todos los oficios"
   } catch (error: any) {
     console.error('Error al cargar categorías:', error)
     
@@ -439,9 +394,6 @@ const cargarCategorias = async (tipo?: 'Oficiante' | 'Profesional') => {
         tipo: 'Profesional',
         icono: c.icono
       }))
-    }
-    if (opcionesDropdown.value.length > 0) {
-      busqueda.value.oficio = opcionesDropdown.value[0]
     }
   } finally {
     cargandoCategorias.value = false
@@ -515,11 +467,29 @@ const cargarProfesionalesDestacados = async () => {
   }
 }
 
-// Lifecycle
+// Sincronizar tipo desde la URL (Oficiantes -> ?tipo=oficiante, Profesionales -> ?tipo=profesional)
+function aplicarTipoDesdeRuta () {
+  const tipo = route.query.tipo as string
+  if (tipo === 'profesional') {
+    tipoBusqueda.value = 'profesional'
+    cargarCategorias('Profesional')
+    cargarProfesionalesDestacados()
+  } else {
+    tipoBusqueda.value = 'oficiante'
+    cargarCategorias('Oficiante')
+    cargarProfesionalesDestacados()
+  }
+}
+
+watch(() => route.query.tipo, () => {
+  aplicarTipoDesdeRuta()
+}, { immediate: false })
+
 onMounted(async () => {
-  // Cargar categorías del tipo inicial (oficiante) y profesionales destacados
+  const tipo = route.query.tipo as string
+  if (tipo === 'profesional') tipoBusqueda.value = 'profesional'
   await Promise.all([
-    cargarCategorias('Oficiante'),
+    cargarCategorias(tipo === 'profesional' ? 'Profesional' : 'Oficiante'),
     cargarProfesionalesDestacados()
   ])
 })
@@ -655,6 +625,7 @@ onMounted(async () => {
   transition: transform 0.2s;
   border: 1px solid #e5e7eb;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  cursor: pointer;
 }
 
 .professional-card:hover {
@@ -718,92 +689,6 @@ onMounted(async () => {
 
 .min-vh-50 {
   min-height: 50vh;
-}
-
-/* Estilos para el menú hamburguesa */
-.menu-toggle {
-  display: none;
-  flex-direction: column;
-  justify-content: space-around;
-  width: 30px;
-  height: 30px;
-  background: transparent;
-  border: none;
-  cursor: pointer;
-  padding: 0;
-  z-index: 1001;
-}
-
-.menu-toggle span {
-  width: 100%;
-  height: 3px;
-  background: #0f172a;
-  border-radius: 2px;
-  transition: all 0.3s ease;
-  transform-origin: center;
-}
-
-.menu-toggle.active span:nth-child(1) {
-  transform: rotate(45deg) translate(6px, 6px);
-}
-
-.menu-toggle.active span:nth-child(2) {
-  opacity: 0;
-}
-
-.menu-toggle.active span:nth-child(3) {
-  transform: rotate(-45deg) translate(6px, -6px);
-}
-
-/* Navegación responsive */
-.navlinks {
-  display: flex;
-  align-items: center;
-  gap: 24px;
-}
-
-.navlinks a {
-  text-decoration: none;
-  color: #0f172a;
-  font-weight: 500;
-  transition: color 0.2s ease;
-}
-
-.navlinks a:hover {
-  color: var(--brand);
-}
-
-.navlinks a.active {
-  color: var(--brand);
-  font-weight: 600;
-}
-
-.navlinks .cta {
-  background: var(--brand);
-  color: white;
-  border: none;
-  padding: 12px 24px;
-  border-radius: 8px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
-
-.navlinks .cta:hover {
-  background: #2563eb;
-  transform: translateY(-1px);
-}
-
-/* Mantener el logo badge original */
-.logo-badge {
-  width: 34px;
-  height: 34px;
-  border-radius: 12px;
-  background: linear-gradient(135deg, var(--brand), #06b6d4);
-  display: grid;
-  place-items: center;
-  color: white;
-  font-weight: 900;
 }
 
 /* Mantener el estilo de las estrellas */
@@ -901,92 +786,7 @@ footer {
   color: #94a3b8;
 }
 
-/* Mantener el estilo del header */
-header {
-  position: sticky;
-  top: 0;
-  z-index: 10;
-  background: white;
-  backdrop-filter: saturate(180%) blur(10px);
-  border-bottom: 1px solid #e5e7eb;
-}
-
-.nav {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 14px 0;
-}
-
-.logo {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  font-weight: 800;
-  color: #0f172a;
-}
-
-/* Responsive design */
-@media (max-width: 768px) {
-  .menu-toggle {
-    display: flex;
-  }
-  
-  .navlinks {
-    position: fixed;
-    top: 0;
-    right: -100%;
-    width: 100%;
-    height: 100vh;
-    background: var(--bg);
-    flex-direction: column;
-    justify-content: center;
-    align-items: center;
-    gap: 32px;
-    transition: right 0.3s ease;
-    z-index: 1000;
-    box-shadow: -4px 0 20px rgba(0, 0, 0, 0.1);
-  }
-  
-  .navlinks.active {
-    right: 0;
-  }
-  
-  .navlinks a {
-    font-size: 1.2rem;
-    font-weight: 600;
-  }
-  
-  .navlinks .cta {
-    font-size: 1.1rem;
-    padding: 16px 32px;
-  }
-  
-  /* Ajustes para el header en móviles */
-  .nav {
-    position: relative;
-    z-index: 1002;
-  }
-  
-  .logo {
-    z-index: 1003;
-  }
-}
-
 @media (max-width: 480px) {
-  .navlinks {
-    gap: 24px;
-  }
-  
-  .navlinks a {
-    font-size: 1.1rem;
-  }
-  
-  .navlinks .cta {
-    font-size: 1rem;
-    padding: 14px 28px;
-  }
-  
   /* Responsive para el formulario de búsqueda */
   .search-container {
     flex-direction: column;

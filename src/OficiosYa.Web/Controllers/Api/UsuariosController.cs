@@ -1,10 +1,12 @@
+using System.Security.Claims;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using MediatR;
 using OficiosYa.Application.DTOs.Request;
-using OficiosYa.Application.DTOs.Response;
 using OficiosYa.Application.UseCases.Usuarios.RegistrarUsuario;
 using OficiosYa.Application.UseCases.Usuarios.Login;
 using OficiosYa.Domain.Interfaces;
+using OficiosYa.Web.Services;
 
 namespace OficiosYa.Web.Controllers.Api
 {
@@ -14,11 +16,15 @@ namespace OficiosYa.Web.Controllers.Api
     {
         private readonly IMediator _mediator;
         private readonly IUsuarioRepository _usuarioRepository;
+        private readonly IProfesionalRepository _profesionalRepository;
+        private readonly JwtTokenService _jwtTokenService;
 
-        public UsuariosController(IMediator mediator, IUsuarioRepository usuarioRepository)
+        public UsuariosController(IMediator mediator, IUsuarioRepository usuarioRepository, IProfesionalRepository profesionalRepository, JwtTokenService jwtTokenService)
         {
             _mediator = mediator;
             _usuarioRepository = usuarioRepository;
+            _profesionalRepository = profesionalRepository;
+            _jwtTokenService = jwtTokenService;
         }
 
         [HttpPost("registrar")]
@@ -50,13 +56,37 @@ namespace OficiosYa.Web.Controllers.Api
 
             var command = new LoginCommand { Request = request };
             var response = await _mediator.Send(command);
-            
+
             if (!response.Success)
             {
-                return Unauthorized(response);
+                return Unauthorized(new { success = false, message = response.Message ?? "Credenciales inválidas" });
             }
 
-            return Ok(response);
+            var token = _jwtTokenService.GenerateToken(
+                response.Usuario!.Id,
+                response.Usuario.Email,
+                response.Usuario.EsAdmin,
+                response.Usuario.EsProfesional);
+
+            var u = response.Usuario;
+            var usuarioParaFront = new
+            {
+                id = u.Id,
+                nombre = u.NombreCompleto,
+                email = u.Email,
+                telefono = u.Telefono,
+                fechaRegistro = u.FechaRegistro,
+                esProfesional = u.EsProfesional,
+                esAdmin = u.EsAdmin,
+                activo = u.Activo
+            };
+
+            return Ok(new
+            {
+                data = new { usuario = usuarioParaFront, token },
+                success = true,
+                message = response.Message
+            });
         }
 
         [HttpGet("{id}")]
@@ -70,6 +100,41 @@ namespace OficiosYa.Web.Controllers.Api
             }
 
             return Ok(usuario);
+        }
+
+        [HttpGet("perfil")]
+        [Authorize]
+        public async Task<IActionResult> ObtenerPerfil()
+        {
+            var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier) ?? User.FindFirstValue("sub");
+            if (string.IsNullOrEmpty(userIdClaim) || !int.TryParse(userIdClaim, out var userId))
+            {
+                return Unauthorized(new { message = "Token inválido" });
+            }
+
+            var usuario = await _usuarioRepository.GetByIdAsync(userId);
+            if (usuario == null)
+            {
+                return NotFound(new { message = "Usuario no encontrado" });
+            }
+
+            var profesional = await _profesionalRepository.GetByUsuarioIdAsync(usuario.Id);
+            return Ok(new
+            {
+                data = new
+                {
+                    id = usuario.Id,
+                    nombre = $"{usuario.Nombre} {usuario.Apellido}".Trim(),
+                    email = usuario.Email,
+                    telefono = usuario.Telefono,
+                    fechaRegistro = usuario.FechaRegistro,
+                    esProfesional = profesional != null,
+                    esAdmin = usuario.EsAdmin,
+                    activo = usuario.Activo,
+                    profesionalId = profesional?.Id
+                },
+                success = true
+            });
         }
 
         [HttpGet("verificar-email")]

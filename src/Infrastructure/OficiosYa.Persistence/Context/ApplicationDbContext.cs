@@ -21,6 +21,9 @@ namespace OficiosYa.Persistence.Context
         public DbSet<Suscripcion> Suscripciones { get; set; }
         public DbSet<PlanSuscripcion> PlanesSuscripcion { get; set; }
         public DbSet<ZonaCobertura> ZonasCobertura { get; set; }
+        public DbSet<ImagenTrabajo> ImagenesTrabajo { get; set; }
+        public DbSet<TrabajoPublicado> TrabajosPublicados { get; set; }
+        public DbSet<TrabajoCategoria> TrabajoCategorias { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -70,10 +73,11 @@ namespace OficiosYa.Persistence.Context
                       .OnDelete(DeleteBehavior.Restrict);
             });
 
-            // Configuraci?n de Resena
+            // Configuración de Resena (UsuarioId opcional para reseñas de visitantes)
             modelBuilder.Entity<Resena>(entity =>
             {
                 entity.HasKey(e => e.Id);
+                entity.Property(e => e.Calificacion).HasColumnName("Puntuacion");
                 entity.HasOne(e => e.Profesional)
                       .WithMany(p => p.Resenas)
                       .HasForeignKey(e => e.ProfesionalId)
@@ -81,6 +85,7 @@ namespace OficiosYa.Persistence.Context
                 entity.HasOne(e => e.Usuario)
                       .WithMany(u => u.Resenas)
                       .HasForeignKey(e => e.UsuarioId)
+                      .IsRequired(false)
                       .OnDelete(DeleteBehavior.Restrict);
             });
 
@@ -176,6 +181,46 @@ namespace OficiosYa.Persistence.Context
                       .WithMany(p => p.ZonasCobertura)
                       .HasForeignKey(e => e.ProfesionalId)
                       .OnDelete(DeleteBehavior.Cascade);
+            });
+
+            // Configuración de ImagenTrabajo (portfolio / fotos de trabajos realizados)
+            modelBuilder.Entity<ImagenTrabajo>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.UrlImagen).IsRequired().HasMaxLength(500);
+                entity.Property(e => e.Titulo).HasMaxLength(200);
+                entity.Property(e => e.Descripcion).HasMaxLength(500);
+                entity.HasOne(e => e.Profesional)
+                      .WithMany(p => p.ImagenesTrabajo)
+                      .HasForeignKey(e => e.ProfesionalId)
+                      .OnDelete(DeleteBehavior.Cascade);
+            });
+
+            // Trabajo publicado (empleo que un cliente publica para que se postulen)
+            modelBuilder.Entity<TrabajoPublicado>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.Descripcion).IsRequired().HasMaxLength(2000);
+                entity.Property(e => e.Telefono).HasMaxLength(20);
+                entity.Property(e => e.Email).IsRequired().HasMaxLength(150);
+                entity.Property(e => e.Estado).HasMaxLength(20);
+                entity.ToTable("TrabajosPublicados", "dbo");
+            });
+
+            // TrabajoCategoria: categorías de servicio que requiere el trabajo
+            modelBuilder.Entity<TrabajoCategoria>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+                entity.HasOne(e => e.TrabajoPublicado)
+                      .WithMany(t => t.TrabajoCategorias)
+                      .HasForeignKey(e => e.TrabajoPublicadoId)
+                      .OnDelete(DeleteBehavior.Cascade);
+                entity.HasOne(e => e.CategoriaServicio)
+                      .WithMany()
+                      .HasForeignKey(e => e.CategoriaServicioId)
+                      .OnDelete(DeleteBehavior.Restrict);
+                entity.HasIndex(e => new { e.TrabajoPublicadoId, e.CategoriaServicioId }).IsUnique();
+                entity.ToTable("TrabajoCategorias", "dbo");
             });
 
             // Datos iniciales

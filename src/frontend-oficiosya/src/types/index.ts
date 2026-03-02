@@ -8,6 +8,8 @@ export interface Usuario {
   esProfesional: boolean
   esAdmin?: boolean
   activo: boolean
+  /** ID del perfil profesional cuando el usuario es profesional (viene en /usuarios/perfil). */
+  profesionalId?: number
 }
 
 export interface RegistrarUsuarioRequest {
@@ -48,6 +50,8 @@ export interface RegistrarProfesionalRequest {
   metodoPago?: string
   codigoPago?: string
   mesesSuscripcion?: number
+  /** Opcional. Imágenes de trabajos en base64 (data:image/...;base64,...) */
+  imagenesTrabajoBase64?: string[]
 }
 
 export interface LoginRequest {
@@ -82,11 +86,20 @@ export interface BuscarProfesionalesRequest {
 export interface Resena {
   id: number
   profesionalId: number
-  clienteId: number
-  puntuacion: number
+  usuarioId?: number | null
+  calificacion: number
   comentario?: string
   fechaCreacion: string
-  cliente: Usuario
+  /** Nombre mostrado (usuario logueado o nombre ingresado por visitante). */
+  nombreAutor?: string
+  usuario?: { id: number; nombre: string } | null
+}
+
+export interface CrearResenaRequest {
+  /** Cómo querés que aparezca tu nombre (obligatorio si no estás logueado). */
+  autorNombre?: string
+  calificacion: number
+  comentario: string
 }
 
 // Tipos para Certificados
@@ -153,6 +166,13 @@ export interface ActualizarCategoriaServicioRequest {
   tipo: 'Oficiante' | 'Profesional'
   icono?: string
   activo: boolean
+}
+
+// Suscripción activa del profesional (panel)
+export interface SuscripcionActiva {
+  tipo: string
+  fechaVencimiento: string
+  estado: string
 }
 
 // Tipos para API Response

@@ -34,6 +34,7 @@ namespace OficiosYa.Domain.Entities
         public virtual ICollection<Certificado> Certificados { get; set; } = new List<Certificado>();
         public virtual ICollection<Suscripcion> Suscripciones { get; set; } = new List<Suscripcion>();
         public virtual ICollection<ZonaCobertura> ZonasCobertura { get; set; } = new List<ZonaCobertura>();
+        public virtual ICollection<ImagenTrabajo> ImagenesTrabajo { get; set; } = new List<ImagenTrabajo>();
 
         // Métodos de dominio
         public void ActualizarCalificacion(decimal nuevaCalificacion, int totalResenas)

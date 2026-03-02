@@ -112,6 +112,55 @@ let map: L.Map | null = null
 let markers: L.Marker[] = []
 let timeoutId: number | null = null
 
+// Actualizar marcadores en el mapa (definido antes del watch para evitar "before initialization")
+function actualizarMapa () {
+  if (!map) return
+
+  markers.forEach(marker => map?.removeLayer(marker))
+  markers = []
+
+  if (localidadesSeleccionadas.value.length === 0) {
+    map.setView([-34.6037, -58.3816], 5)
+    return
+  }
+
+  const bounds: L.LatLngBounds = L.latLngBounds([])
+  localidadesSeleccionadas.value.forEach((localidad) => {
+    if (localidad.latitud && localidad.longitud) {
+      const marker = L.marker([localidad.latitud, localidad.longitud])
+        .addTo(map!)
+        .bindPopup(`<strong>${localidad.localidad}</strong><br>${localidad.provincia}`)
+      markers.push(marker)
+      bounds.extend([localidad.latitud, localidad.longitud])
+    }
+  })
+  if (bounds.isValid()) {
+    map.fitBounds(bounds, { padding: [50, 50] })
+  }
+}
+
+// Inicializar mapa
+function inicializarMapa () {
+  if (!mapContainer.value) return
+
+  delete (L.Icon.Default.prototype as any)._getIconUrl
+  L.Icon.Default.mergeOptions({
+    iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon-2x.png',
+    iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon.png',
+    shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png',
+  })
+
+  map = L.map(mapContainer.value).setView([-34.6037, -58.3816], 5)
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '© OpenStreetMap contributors',
+    maxZoom: 19
+  }).addTo(map)
+
+  if (localidadesSeleccionadas.value.length > 0) {
+    actualizarMapa()
+  }
+}
+
 // Inicializar con valores del modelo
 watch(() => props.modelValue, (newValue) => {
   if (newValue && newValue.length > 0) {
@@ -192,67 +241,6 @@ const eliminarLocalidad = (index: number) => {
   emit('update:modelValue', localidadesSeleccionadas.value)
   if (props.showMap) {
     actualizarMapa()
-  }
-}
-
-// Inicializar mapa
-const inicializarMapa = () => {
-  if (!mapContainer.value) return
-
-  // Fix para iconos de Leaflet (problema conocido con Webpack/Vite)
-  delete (L.Icon.Default.prototype as any)._getIconUrl
-  L.Icon.Default.mergeOptions({
-    iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon-2x.png',
-    iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon.png',
-    shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png',
-  })
-
-  // Centro de Argentina
-  map = L.map(mapContainer.value).setView([-34.6037, -58.3816], 5)
-
-  // Agregar capa de OpenStreetMap
-  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-    attribution: '© OpenStreetMap contributors',
-    maxZoom: 19
-  }).addTo(map)
-
-  // Si hay localidades, actualizar el mapa
-  if (localidadesSeleccionadas.value.length > 0) {
-    actualizarMapa()
-  }
-}
-
-// Actualizar marcadores en el mapa
-const actualizarMapa = () => {
-  if (!map) return
-
-  // Eliminar marcadores anteriores
-  markers.forEach(marker => map?.removeLayer(marker))
-  markers = []
-
-  if (localidadesSeleccionadas.value.length === 0) {
-    // Centrar en Argentina
-    map.setView([-34.6037, -58.3816], 5)
-    return
-  }
-
-  // Agregar marcadores para cada localidad
-  const bounds: L.LatLngBounds = L.latLngBounds([])
-
-  localidadesSeleccionadas.value.forEach((localidad) => {
-    if (localidad.latitud && localidad.longitud) {
-      const marker = L.marker([localidad.latitud, localidad.longitud])
-        .addTo(map!)
-        .bindPopup(`<strong>${localidad.localidad}</strong><br>${localidad.provincia}`)
-
-      markers.push(marker)
-      bounds.extend([localidad.latitud, localidad.longitud])
-    }
-  })
-
-  // Ajustar vista para mostrar todos los marcadores
-  if (bounds.isValid()) {
-    map.fitBounds(bounds, { padding: [50, 50] })
   }
 }
 

@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Authorization;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using OficiosYa.Application.DTOs.Request;
@@ -8,7 +9,9 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.Data.SqlClient;
 using System.Threading;
 using System.Data.Common;
+using System.Security.Claims;
 using OficiosYa.Domain.Entities;
+using OficiosYa.Web.Services;
 
 namespace OficiosYa.Web.Controllers.Api
 {
@@ -19,12 +22,14 @@ namespace OficiosYa.Web.Controllers.Api
         private readonly IMediator _mediator;
         private readonly ApplicationDbContext _context;
         private readonly IWebHostEnvironment _environment;
+        private readonly IOpenAIModerationService _moderation;
 
-        public ProfesionalesController(IMediator mediator, ApplicationDbContext context, IWebHostEnvironment environment)
+        public ProfesionalesController(IMediator mediator, ApplicationDbContext context, IWebHostEnvironment environment, IOpenAIModerationService moderation)
         {
             _mediator = mediator;
             _context = context;
             _environment = environment;
+            _moderation = moderation;
         }
 
         [HttpPost("registrar")]
@@ -32,7 +37,33 @@ namespace OficiosYa.Web.Controllers.Api
         {
             if (!ModelState.IsValid)
             {
-                return BadRequest(ModelState);
+                string? primerError = null;
+                foreach (var entry in ModelState.Values)
+                {
+                    if (entry?.Errors == null) continue;
+                    foreach (var err in entry.Errors)
+                    {
+                        if (!string.IsNullOrEmpty(err.ErrorMessage))
+                        {
+                            primerError = err.ErrorMessage;
+                            break;
+                        }
+                    }
+                    if (primerError != null) break;
+                }
+                return BadRequest(new { message = primerError ?? "Revisá los datos del formulario.", errors = ModelState });
+            }
+
+            if (_moderation.IsEnabled)
+            {
+                var textos = new List<string>();
+                if (!string.IsNullOrWhiteSpace(request.Descripcion)) textos.Add(request.Descripcion);
+                var imagenes = new List<string>();
+                if (!string.IsNullOrWhiteSpace(request.FotoPerfilBase64)) imagenes.Add(request.FotoPerfilBase64);
+                if (request.ImagenesTrabajoBase64 != null) imagenes.AddRange(request.ImagenesTrabajoBase64.Where(x => !string.IsNullOrWhiteSpace(x)));
+                var (aprobado, mensaje) = await _moderation.ModerateAsync(textos: textos.Count > 0 ? textos : null, imagenesBase64: imagenes.Count > 0 ? imagenes : null);
+                if (!aprobado)
+                    return BadRequest(new { message = mensaje });
             }
 
             try
@@ -43,6 +74,26 @@ namespace OficiosYa.Web.Controllers.Api
                 if (profesional == null)
                 {
                     return Conflict(new { message = "El email ya está registrado" });
+                }
+
+                if (!string.IsNullOrWhiteSpace(request.FotoPerfilBase64))
+                {
+                    var urlFoto = await GuardarFotoPerfilAsync(profesional.Id, request.FotoPerfilBase64);
+                    if (!string.IsNullOrEmpty(urlFoto))
+                    {
+                        var prof = await _context.Profesionales.FindAsync(profesional.Id);
+                        if (prof != null)
+                        {
+                            prof.FotoPerfil = urlFoto;
+                            await _context.SaveChangesAsync();
+                        }
+                        profesional.FotoPerfil = urlFoto;
+                    }
+                }
+
+                if (request.ImagenesTrabajoBase64 != null && request.ImagenesTrabajoBase64.Count > 0)
+                {
+                    await GuardarImagenesTrabajoAsync(profesional.Id, request.ImagenesTrabajoBase64);
                 }
 
                 return CreatedAtAction(nameof(ObtenerProfesional), new { id = profesional.Id }, profesional);
@@ -68,6 +119,109 @@ namespace OficiosYa.Web.Controllers.Api
             }
         }
 
+        /// <summary>
+        /// Valida imágenes (moderación) sin crear registro. Para usar al subir foto de perfil, fotos de trabajo o certificados.
+        /// </summary>
+        [HttpPost("validar-imagenes")]
+        public async Task<IActionResult> ValidarImagenes([FromBody] ValidarImagenesRequest request)
+        {
+            if (request?.ImagenesBase64 == null || request.ImagenesBase64.Count == 0)
+                return BadRequest(new { message = "No se enviaron imágenes para validar." });
+            var list = request.ImagenesBase64.Where(x => !string.IsNullOrWhiteSpace(x)).ToList();
+            if (list.Count == 0)
+                return BadRequest(new { message = "No se enviaron imágenes para validar." });
+            var (aprobado, mensaje) = await _moderation.ModerateAsync(textos: null, imagenesBase64: list);
+            if (!aprobado)
+                return BadRequest(new { message = mensaje });
+            return Ok(new { aprobado = true });
+        }
+
+        /// <summary>
+        /// Obtiene el perfil del profesional asociado al usuario autenticado (para el panel del profesional).
+        /// </summary>
+        [HttpGet("mi-perfil")]
+        [Authorize]
+        public async Task<IActionResult> ObtenerMiPerfil()
+        {
+            var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier) ?? User.FindFirstValue("sub");
+            if (string.IsNullOrEmpty(userIdClaim) || !int.TryParse(userIdClaim, out var userId))
+            {
+                return Unauthorized(new { message = "Token inválido" });
+            }
+
+            var profesional = await _context.Profesionales
+                .Include(p => p.Usuario)
+                .Include(p => p.ProfesionalCategorias)
+                    .ThenInclude(pc => pc.CategoriaServicio)
+                .Include(p => p.ZonasCobertura)
+                .Include(p => p.ImagenesTrabajo)
+                .Include(p => p.Suscripciones)
+                .FirstOrDefaultAsync(p => p.UsuarioId == userId);
+
+            if (profesional == null)
+            {
+                return NotFound(new { message = "No tenés un perfil de profesional asociado a esta cuenta." });
+            }
+
+            var suscripcionActiva = profesional.Suscripciones
+                .FirstOrDefault(s => s.Estado == "Activa" && s.FechaVencimiento > DateTime.UtcNow);
+
+            var u = profesional.Usuario;
+            return Ok(new
+            {
+                success = true,
+                data = new
+                {
+                    id = profesional.Id,
+                    usuarioId = profesional.UsuarioId,
+                    descripcion = profesional.Descripcion ?? string.Empty,
+                    fotoPerfil = profesional.FotoPerfil,
+                    calificacionPromedio = profesional.CalificacionPromedio,
+                    totalResenas = profesional.TotalResenas,
+                    disponible = profesional.Disponible,
+                    fechaRegistro = profesional.FechaRegistro.ToString("yyyy-MM-ddTHH:mm:ss.fffZ"),
+                    activo = profesional.Activo,
+                    usuario = u != null ? new
+                    {
+                        id = u.Id,
+                        nombre = (u.Nombre ?? "") + " " + (u.Apellido ?? "").Trim(),
+                        email = u.Email ?? "",
+                        telefono = u.Telefono,
+                        ciudad = u.Ciudad,
+                        provincia = u.Provincia
+                    } : null,
+                    oficios = profesional.ProfesionalCategorias
+                        .Where(pc => pc.Activo && pc.CategoriaServicio != null)
+                        .Select(pc => new { id = pc.CategoriaServicioId, nombre = pc.CategoriaServicio!.Nombre ?? "" })
+                        .ToList(),
+                    zonasCobertura = profesional.ZonasCobertura
+                        .Where(z => z.Activo)
+                        .Select(z => new
+                        {
+                            localidad = z.Localidad,
+                            provincia = z.Provincia,
+                            departamento = z.Departamento,
+                            latitud = z.Latitud,
+                            longitud = z.Longitud,
+                            codigoPostal = z.CodigoPostal
+                        })
+                        .ToList(),
+                    imagenesTrabajo = profesional.ImagenesTrabajo
+                        .Where(i => i.Activo)
+                        .OrderBy(i => i.Orden)
+                        .ThenBy(i => i.Id)
+                        .Select(i => new { id = i.Id, urlImagen = i.UrlImagen, titulo = i.Titulo, descripcion = i.Descripcion })
+                        .ToList(),
+                    suscripcionActiva = suscripcionActiva != null ? new
+                    {
+                        tipo = suscripcionActiva.TipoSuscripcion,
+                        fechaVencimiento = suscripcionActiva.FechaVencimiento.ToString("yyyy-MM-dd"),
+                        estado = suscripcionActiva.Estado
+                    } : null
+                }
+            });
+        }
+
         [HttpGet("{id}")]
         public async Task<IActionResult> ObtenerProfesional(int id)
         {
@@ -75,6 +229,8 @@ namespace OficiosYa.Web.Controllers.Api
                 .Include(p => p.Usuario)
                 .Include(p => p.ProfesionalCategorias)
                     .ThenInclude(pc => pc.CategoriaServicio)
+                .Include(p => p.ZonasCobertura)
+                .Include(p => p.ImagenesTrabajo)
                 .FirstOrDefaultAsync(p => p.Id == id);
 
             if (profesional == null)
@@ -82,21 +238,251 @@ namespace OficiosYa.Web.Controllers.Api
                 return NotFound(new { message = "Profesional no encontrado" });
             }
 
+            var u = profesional.Usuario;
             return Ok(new
             {
-                id = profesional.Id,
-                nombre = profesional.Usuario.Nombre,
-                apellido = profesional.Usuario.Apellido,
-                email = profesional.Usuario.Email,
-                descripcion = profesional.Descripcion,
-                calificacionPromedio = profesional.CalificacionPromedio,
-                totalResenas = profesional.TotalResenas,
-                disponible = profesional.Disponible,
-                oficios = profesional.ProfesionalCategorias
-                    .Where(pc => pc.Activo)
-                    .Select(pc => pc.CategoriaServicio.Nombre)
-                    .ToList()
+                success = true,
+                data = new
+                {
+                    id = profesional.Id,
+                    usuarioId = profesional.UsuarioId,
+                    descripcion = profesional.Descripcion ?? string.Empty,
+                    fotoPerfil = profesional.FotoPerfil,
+                    calificacionPromedio = profesional.CalificacionPromedio,
+                    totalResenas = profesional.TotalResenas,
+                    disponible = profesional.Disponible,
+                    fechaRegistro = profesional.FechaRegistro.ToString("yyyy-MM-ddTHH:mm:ss.fffZ"),
+                    activo = profesional.Activo,
+                    usuario = u != null ? new
+                    {
+                        id = u.Id,
+                        nombre = (u.Nombre ?? "") + " " + (u.Apellido ?? "").Trim(),
+                        email = u.Email ?? "",
+                        telefono = u.Telefono,
+                        ciudad = u.Ciudad,
+                        provincia = u.Provincia
+                    } : null,
+                    oficios = profesional.ProfesionalCategorias
+                        .Where(pc => pc.Activo && pc.CategoriaServicio != null)
+                        .Select(pc => new { nombre = pc.CategoriaServicio!.Nombre ?? "" })
+                        .ToList(),
+                    zonasCobertura = profesional.ZonasCobertura
+                        .Where(z => z.Activo)
+                        .Select(z => new { localidad = z.Localidad, provincia = z.Provincia, departamento = z.Departamento })
+                        .ToList(),
+                    imagenesTrabajo = profesional.ImagenesTrabajo
+                        .Where(i => i.Activo)
+                        .OrderBy(i => i.Orden)
+                        .ThenBy(i => i.Id)
+                        .Select(i => new { id = i.Id, urlImagen = i.UrlImagen, titulo = i.Titulo, descripcion = i.Descripcion })
+                        .ToList()
+                }
             });
+        }
+
+        /// <summary>
+        /// Lista las reseñas de un profesional (cualquier usuario puede ver).
+        /// </summary>
+        [HttpGet("{id}/resenas")]
+        public async Task<IActionResult> ListarResenas(int id)
+        {
+            var profesional = await _context.Profesionales.FindAsync(id);
+            if (profesional == null)
+                return NotFound(new { message = "Profesional no encontrado" });
+
+            var resenas = await _context.Resenas
+                .Where(r => r.ProfesionalId == id && r.Activa)
+                .OrderByDescending(r => r.FechaCreacion)
+                .Include(r => r.Usuario)
+                .Select(r => new
+                {
+                    id = r.Id,
+                    profesionalId = r.ProfesionalId,
+                    usuarioId = r.UsuarioId,
+                    calificacion = r.Calificacion,
+                    comentario = r.Comentario,
+                    fechaCreacion = r.FechaCreacion.ToString("yyyy-MM-ddTHH:mm:ssZ"),
+                    nombreAutor = r.Usuario != null
+                        ? (r.Usuario.Nombre ?? "") + " " + (r.Usuario.Apellido ?? "").Trim()
+                        : (r.AutorNombre ?? "Anónimo"),
+                    usuario = r.Usuario != null ? new { id = r.Usuario.Id, nombre = (r.Usuario.Nombre ?? "") + " " + (r.Usuario.Apellido ?? "").Trim() } : null
+                })
+                .ToListAsync();
+
+            return Ok(resenas);
+        }
+
+        /// <summary>
+        /// Crea una reseña para el profesional. No requiere login: se puede enviar AutorNombre + Calificacion + Comentario.
+        /// Si el usuario está logueado, se guarda su cuenta y no puede reseñar su propio perfil.
+        /// </summary>
+        [HttpPost("{id}/resenas")]
+        public async Task<IActionResult> CrearResena(int id, [FromBody] CrearResenaRequest request)
+        {
+            if (request == null || request.Calificacion < 1 || request.Calificacion > 5)
+                return BadRequest(new { message = "La calificación debe ser entre 1 y 5" });
+            if (string.IsNullOrWhiteSpace(request.Comentario) || request.Comentario.Length > 1000)
+                return BadRequest(new { message = "El comentario es obligatorio y no puede superar 1000 caracteres" });
+
+            // Siempre moderar reseñas: filtro local de palabras (insultos/profanidad). Si hay API key de OpenAI, además se usa la API.
+            var textosResena = new[] { request.Comentario.Trim(), request.AutorNombre?.Trim() ?? "" }.Where(x => !string.IsNullOrEmpty(x)).ToList();
+            var (aprobado, mensaje) = await _moderation.ModerateAsync(textos: textosResena.Count > 0 ? textosResena : null);
+            if (!aprobado)
+                return BadRequest(new { message = mensaje });
+
+            var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier) ?? User.FindFirstValue("sub");
+            int? usuarioId = null;
+            if (!string.IsNullOrEmpty(userIdClaim) && int.TryParse(userIdClaim, out var uid))
+                usuarioId = uid;
+
+            var profesional = await _context.Profesionales.FindAsync(id);
+            if (profesional == null)
+                return NotFound(new { message = "Profesional no encontrado" });
+            if (usuarioId.HasValue && profesional.UsuarioId == usuarioId.Value)
+                return BadRequest(new { message = "No podés dejar una reseña en tu propio perfil" });
+
+            string? autorNombre = request.AutorNombre?.Trim();
+            if (string.IsNullOrWhiteSpace(autorNombre))
+            {
+                if (!usuarioId.HasValue)
+                    return BadRequest(new { message = "Indicá cómo querés que aparezca tu nombre en la reseña" });
+                var usuario = await _context.Usuarios.FindAsync(usuarioId.Value);
+                autorNombre = usuario != null ? (usuario.Nombre ?? "") + " " + (usuario.Apellido ?? "").Trim() : "Usuario";
+            }
+            if (autorNombre.Length > 100)
+                autorNombre = autorNombre.Substring(0, 100);
+
+            var resena = new Resena
+            {
+                ProfesionalId = id,
+                UsuarioId = usuarioId,
+                AutorNombre = autorNombre,
+                Calificacion = request.Calificacion,
+                Comentario = request.Comentario?.Trim() ?? "",
+                FechaCreacion = DateTime.UtcNow,
+                Activa = true
+            };
+            _context.Resenas.Add(resena);
+            await _context.SaveChangesAsync();
+
+            var activas = await _context.Resenas
+                .Where(r => r.ProfesionalId == id && r.Activa)
+                .ToListAsync();
+            var total = activas.Count;
+            var promedio = total > 0 ? (decimal)activas.Average(r => r.Calificacion) : 0;
+            profesional.ActualizarCalificacion(promedio, total);
+            await _context.SaveChangesAsync();
+
+            return CreatedAtAction(nameof(ListarResenas), new { id }, new
+            {
+                id = resena.Id,
+                profesionalId = resena.ProfesionalId,
+                usuarioId = resena.UsuarioId,
+                calificacion = resena.Calificacion,
+                comentario = resena.Comentario,
+                fechaCreacion = resena.FechaCreacion.ToString("yyyy-MM-ddTHH:mm:ssZ"),
+                nombreAutor = autorNombre
+            });
+        }
+
+        /// <summary>
+        /// Actualiza el perfil del profesional (descripción, disponibilidad, foto, zonas, categorías).
+        /// Solo el dueño del perfil puede actualizarlo.
+        /// </summary>
+        [HttpPut("mi-perfil")]
+        [Authorize]
+        public async Task<IActionResult> ActualizarMiPerfil([FromBody] ActualizarMiPerfilRequest request)
+        {
+            var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier) ?? User.FindFirstValue("sub");
+            if (string.IsNullOrEmpty(userIdClaim) || !int.TryParse(userIdClaim, out var userId))
+            {
+                return Unauthorized(new { message = "Token inválido" });
+            }
+
+            var profesional = await _context.Profesionales
+                .Include(p => p.ProfesionalCategorias)
+                .Include(p => p.ZonasCobertura)
+                .FirstOrDefaultAsync(p => p.UsuarioId == userId);
+
+            if (profesional == null)
+            {
+                return NotFound(new { message = "No tenés un perfil de profesional asociado a esta cuenta." });
+            }
+
+            if (_moderation.IsEnabled)
+            {
+                var textos = request.Descripcion != null ? new[] { request.Descripcion } : Array.Empty<string>();
+                var imagenes = !string.IsNullOrWhiteSpace(request.FotoPerfilBase64) ? new[] { request.FotoPerfilBase64 } : Array.Empty<string>();
+                var (aprobado, mensaje) = await _moderation.ModerateAsync(textos: textos.Length > 0 ? textos : null, imagenesBase64: imagenes.Length > 0 ? imagenes : null);
+                if (!aprobado)
+                    return BadRequest(new { message = mensaje });
+            }
+
+            if (request.Descripcion != null)
+                profesional.Descripcion = request.Descripcion;
+
+            if (request.Disponible.HasValue)
+                profesional.Disponible = request.Disponible.Value;
+
+            if (!string.IsNullOrWhiteSpace(request.FotoPerfilBase64))
+            {
+                var urlFoto = await GuardarFotoPerfilAsync(profesional.Id, request.FotoPerfilBase64);
+                if (!string.IsNullOrEmpty(urlFoto))
+                    profesional.FotoPerfil = urlFoto;
+            }
+
+            if (request.ZonasCobertura != null)
+            {
+                foreach (var z in profesional.ZonasCobertura)
+                    z.Activo = false;
+                foreach (var dto in request.ZonasCobertura)
+                {
+                    _context.ZonasCobertura.Add(new ZonaCobertura
+                    {
+                        ProfesionalId = profesional.Id,
+                        Localidad = dto.Localidad ?? "",
+                        Provincia = dto.Provincia ?? "",
+                        Departamento = dto.Departamento,
+                        Latitud = dto.Latitud,
+                        Longitud = dto.Longitud,
+                        CodigoPostal = dto.CodigoPostal,
+                        FechaRegistro = DateTime.UtcNow,
+                        Activo = true
+                    });
+                }
+            }
+
+            if (request.Oficios != null)
+            {
+                foreach (var pc in profesional.ProfesionalCategorias)
+                    pc.Activo = false;
+                var categorias = await _context.CategoriaServicios
+                    .Where(c => c.Activo && request.Oficios.Contains(c.Nombre))
+                    .ToListAsync();
+                foreach (var cat in categorias)
+                {
+                    var existe = profesional.ProfesionalCategorias.Any(pc => pc.CategoriaServicioId == cat.Id);
+                    if (!existe)
+                    {
+                        _context.ProfesionalCategorias.Add(new ProfesionalCategoria
+                        {
+                            ProfesionalId = profesional.Id,
+                            CategoriaServicioId = cat.Id,
+                            FechaAsignacion = DateTime.UtcNow,
+                            Activo = true
+                        });
+                    }
+                    else
+                    {
+                        var pc = profesional.ProfesionalCategorias.First(p => p.CategoriaServicioId == cat.Id);
+                        pc.Activo = true;
+                    }
+                }
+            }
+
+            await _context.SaveChangesAsync();
+
+            return Ok(new { success = true, message = "Perfil actualizado correctamente." });
         }
 
         [HttpGet("planes-suscripcion")]
@@ -282,6 +668,7 @@ namespace OficiosYa.Web.Controllers.Api
                     .Include(p => p.ProfesionalCategorias)
                         .ThenInclude(pc => pc.CategoriaServicio)
                     .Include(p => p.Suscripciones)
+                    .Include(p => p.Resenas.Where(r => r.Activa).OrderByDescending(r => r.FechaCreacion).Take(2))
                     .Where(p => p.Activo && p.Disponible && p.Usuario != null);
 
                 // Filtrar por tipo de servicio si se especifica
@@ -579,6 +966,94 @@ namespace OficiosYa.Web.Controllers.Api
                 });
             }
         }
+
+        private async Task<string?> GuardarFotoPerfilAsync(int profesionalId, string dataUrl)
+        {
+            if (string.IsNullOrWhiteSpace(dataUrl) || !dataUrl.StartsWith("data:image/", StringComparison.OrdinalIgnoreCase))
+                return null;
+
+            var match = System.Text.RegularExpressions.Regex.Match(dataUrl, @"^data:image/(\w+);base64,(.+)$");
+            if (!match.Success) return null;
+
+            var extension = match.Groups[1].Value.ToLowerInvariant() switch
+            {
+                "jpeg" or "jpg" => ".jpg",
+                "png" => ".png",
+                "gif" => ".gif",
+                "webp" => ".webp",
+                _ => ".jpg"
+            };
+            byte[] bytes;
+            try { bytes = Convert.FromBase64String(match.Groups[2].Value); }
+            catch { return null; }
+
+            var webRoot = _environment.WebRootPath ?? Path.Combine(_environment.ContentRootPath, "wwwroot");
+            var uploadsDir = Path.Combine(webRoot, "uploads", "perfiles");
+            if (!Directory.Exists(uploadsDir))
+                Directory.CreateDirectory(uploadsDir);
+
+            var fileName = $"{profesionalId}_{Guid.NewGuid():N}{extension}";
+            var filePath = Path.Combine(uploadsDir, fileName);
+            await System.IO.File.WriteAllBytesAsync(filePath, bytes);
+            return $"/uploads/perfiles/{fileName}";
+        }
+
+        private async Task GuardarImagenesTrabajoAsync(int profesionalId, List<string> imagenesBase64)
+        {
+            var webRoot = _environment.WebRootPath ?? Path.Combine(_environment.ContentRootPath, "wwwroot");
+            var uploadsDir = Path.Combine(webRoot, "uploads", "trabajos");
+            if (!Directory.Exists(uploadsDir))
+                Directory.CreateDirectory(uploadsDir);
+
+            int orden = 0;
+            foreach (var dataUrl in imagenesBase64)
+            {
+                if (string.IsNullOrWhiteSpace(dataUrl) || !dataUrl.StartsWith("data:image/", StringComparison.OrdinalIgnoreCase))
+                    continue;
+
+                var match = System.Text.RegularExpressions.Regex.Match(dataUrl, @"^data:image/(\w+);base64,(.+)$");
+                if (!match.Success)
+                    continue;
+
+                var extension = match.Groups[1].Value.ToLowerInvariant() switch
+                {
+                    "jpeg" or "jpg" => ".jpg",
+                    "png" => ".png",
+                    "gif" => ".gif",
+                    "webp" => ".webp",
+                    _ => ".jpg"
+                };
+                var base64 = match.Groups[2].Value;
+                byte[] bytes;
+                try
+                {
+                    bytes = Convert.FromBase64String(base64);
+                }
+                catch
+                {
+                    continue;
+                }
+
+                var fileName = $"{profesionalId}_{Guid.NewGuid():N}{extension}";
+                var filePath = Path.Combine(uploadsDir, fileName);
+                await System.IO.File.WriteAllBytesAsync(filePath, bytes);
+
+                var relativeUrl = $"/uploads/trabajos/{fileName}";
+                _context.ImagenesTrabajo.Add(new ImagenTrabajo
+                {
+                    ProfesionalId = profesionalId,
+                    UrlImagen = relativeUrl,
+                    Orden = orden++,
+                    Activo = true
+                });
+            }
+
+            await _context.SaveChangesAsync();
+        }
     }
 
+    public class ValidarImagenesRequest
+    {
+        public List<string>? ImagenesBase64 { get; set; }
+    }
 }

@@ -20,21 +20,6 @@
         @keydown.escape="closeDropdown"
       />
       <svg 
-        v-if="selectedValue && !disabled" 
-        @click="clearSelection"
-        width="16" 
-        height="16" 
-        viewBox="0 0 24 24" 
-        fill="none" 
-        xmlns="http://www.w3.org/2000/svg"
-        class="clear-icon"
-        style="cursor: pointer;"
-      >
-        <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/>
-        <path d="M8 8l8 8M16 8l-8 8" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-      </svg>
-      <svg 
-        v-else
         width="12" 
         height="12" 
         viewBox="0 0 12 12" 
@@ -87,7 +72,7 @@ interface Props {
 const props = withDefaults(defineProps<Props>(), {
   placeholder: 'Buscar...',
   disabled: false,
-  defaultOption: 'Todos los oficios'
+  defaultOption: ''
 })
 
 const emit = defineEmits<{
@@ -292,16 +277,6 @@ onUnmounted(() => {
 .search-input:disabled {
   cursor: not-allowed;
   opacity: 0.6;
-}
-
-.clear-icon {
-  color: #64748b;
-  flex-shrink: 0;
-  transition: color 0.2s;
-}
-
-.clear-icon:hover {
-  color: #0f172a;
 }
 
 .dropdown-arrow {

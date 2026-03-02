@@ -53,6 +53,12 @@ namespace OficiosYa.Application.DTOs.Request
         public string? CodigoPago { get; set; } // Para Rapipago/Pagos Fáciles
 
         public int? MesesSuscripcion { get; set; } = 1; // Cantidad de meses de suscripción
+
+        /// <summary>Opcional. Foto de perfil en base64 (data:image/...;base64,...).</summary>
+        public string? FotoPerfilBase64 { get; set; }
+
+        /// <summary>Opcional. Imágenes de trabajos realizados en base64 (data:image/...;base64,...).</summary>
+        public List<string>? ImagenesTrabajoBase64 { get; set; }
     }
 
     public class ZonaCoberturaDto

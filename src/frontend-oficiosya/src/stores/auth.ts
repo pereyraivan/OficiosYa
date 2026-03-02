@@ -50,11 +50,7 @@ export const useAuthStore = defineStore('auth', () => {
   }
 
   const verificarEmail = async (email: string): Promise<boolean> => {
-    try {
-      return await usuarioService.verificarEmail(email)
-    } catch (error) {
-      return false
-    }
+    return await usuarioService.verificarEmail(email)
   }
 
   const cargarPerfil = async () => {

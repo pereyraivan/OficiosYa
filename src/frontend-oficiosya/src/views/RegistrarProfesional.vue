@@ -1,20 +1,6 @@
 <template>
   <div class="registrar-profesional">
-    <!-- Header -->
-    <header>
-      <div class="container nav">
-        <div class="logo" @click="irAHome">
-          <div class="logo-badge">🛠️</div>
-          <span>OficiosYa</span>
-        </div>
-        <nav class="navlinks">
-          <a href="#" @click="irAHome">Inicio</a>
-          <a href="#" @click="irALogin">Iniciar Sesión</a>
-        </nav>
-      </div>
-    </header>
-
-    <!-- Formulario de Registro de Profesional con Wizard -->
+    <!-- Formulario de Registro de Profesional con Wizard (el menú superior es el AppNav global) -->
     <section class="section" style="background: linear-gradient(135deg, #f0fdf4 0%, #ecfdf5 50%, #f0f9ff 100%); min-height: calc(100vh - 80px);">
       <div class="container" style="max-width: 800px; padding-top: 40px;">
         <div class="card" style="padding: 40px; background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(10px); border: 1px solid rgba(34, 197, 94, 0.1);">
@@ -25,7 +11,8 @@
 
           <Wizard
             :steps="wizardSteps"
-            :can-proceed="canProceedToNext"
+            :can-proceed="true"
+            :validate-before-next="validarPasoActual"
             @finish="registrarProfesional"
             @step-change="onStepChange"
           >
@@ -181,6 +168,26 @@
                     placeholder="4000"
                   />
                 </div>
+
+                <!-- Mensaje de error (ej. imagen no aprobada por moderación) -->
+                <div v-if="errores.general" class="error error-general-box" style="margin-bottom: 12px;">
+                  {{ errores.general }}
+                </div>
+                <!-- Foto de perfil (opcional) -->
+                <div class="form-group">
+                  <label>Foto de perfil (opcional)</label>
+                  <input
+                    ref="fileInputFotoPerfil"
+                    type="file"
+                    accept="image/jpeg,image/png,image/webp,image/gif"
+                    class="input-file"
+                    @change="onFotoPerfilChange"
+                  />
+                  <div v-if="fotoPerfilBase64" class="foto-perfil-preview">
+                    <img :src="fotoPerfilBase64" alt="Vista previa" />
+                    <button type="button" class="btn-quitar-foto" @click="quitarFotoPerfil">Quitar foto</button>
+                  </div>
+                </div>
               </div>
             </template>
 
@@ -188,9 +195,12 @@
             <template #step-2>
               <div class="step-content">
                 <h3 style="margin-bottom: 24px; color: var(--text);">Datos del Oficio/Profesión</h3>
-                
+                <div v-if="errores.general || errores.oficios" class="error error-general-box" style="margin-bottom: 16px;">
+                  <p v-if="errores.general">{{ errores.general }}</p>
+                  <p v-if="errores.oficios">{{ errores.oficios }}</p>
+                </div>
                 <!-- Selección de Tipo de Servicio -->
-                <div class="form-group">
+                <div class="form-group" :class="{ 'error-border-wrap': errores.general && tipoServicio === null }">
                   <label style="margin-bottom: 12px; display: block; font-weight: 500;">
                     ¿Qué tipo de servicio ofrecés? *
                   </label>
@@ -384,6 +394,12 @@
               <div class="step-content">
                 <h3 style="margin-bottom: 24px; color: var(--text);">Suscripción y Pago</h3>
                 
+                <!-- Mensajes de error de campos obligatorios (paso 3) -->
+                <div v-if="errores.plan || errores.metodoPago || errores.aceptaTerminos" class="error error-general-box" style="margin-bottom: 16px;">
+                  <p v-if="errores.plan">{{ errores.plan }}</p>
+                  <p v-if="errores.metodoPago">{{ errores.metodoPago }}</p>
+                  <p v-if="errores.aceptaTerminos">{{ errores.aceptaTerminos }}</p>
+                </div>
                 <!-- Selección de Plan -->
                 <div class="form-group" style="margin-bottom: 24px;">
                   <label style="margin-bottom: 12px; display: block; font-weight: 500;">
@@ -392,7 +408,7 @@
                   <div v-if="cargandoPlanes" style="padding: 20px; text-align: center;">
                     <span class="small">Cargando planes...</span>
                   </div>
-                  <div v-else class="planes-container">
+                  <div v-else class="planes-container" :class="{ 'error-border-wrap': errores.plan }">
                     <div 
                       v-for="plan in planesDisponibles" 
                       :key="plan.id"
@@ -438,12 +454,15 @@
                     </div>
                   </div>
                 </div>
+                <span v-if="errores.plan" class="error">{{ errores.plan }}</span>
 
                 <p style="color: #64748b; margin-bottom: 24px; text-align: center;">
                   Seleccioná tu método de pago preferido
                 </p>
 
-                <div class="payment-methods">
+                <div class="payment-methods"
+                     :class="{ 'error-border': errores.metodoPago }"
+                >
                   <div 
                     v-for="metodo in metodosPago" 
                     :key="metodo.id"
@@ -461,6 +480,7 @@
                     </div>
                   </div>
                 </div>
+                <span v-if="errores.metodoPago" class="error">{{ errores.metodoPago }}</span>
 
                 <!-- Cupón de Pago (para Rapipago/Pagos Fáciles) -->
                 <div v-if="metodoPagoSeleccionado === 'rapipago' || metodoPagoSeleccionado === 'pagosfaciles'" class="payment-coupon">
@@ -544,6 +564,37 @@
                 </div>
               </div>
             </template>
+
+            <!-- Paso 4: Fotos de trabajos realizados (opcional) -->
+            <template #step-4>
+              <div class="step-content">
+                <!-- Mensaje de error (moderación, etc.) visible en este paso para que el usuario pueda cambiar la imagen -->
+                <div v-if="errores.general" ref="errorGeneralRef" class="error error-general-box" role="alert">
+                  {{ errores.general }}
+                  <p class="error-hint">Podés quitar la imagen problemática y elegir otra, luego volvé a intentar.</p>
+                </div>
+                <h3 style="margin-bottom: 16px; color: var(--text);">Fotos de trabajos realizados</h3>
+                <p style="color: #64748b; margin-bottom: 20px; font-size: 0.95rem;">
+                  Subí fotos de trabajos que hayas realizado (opcional). Se mostrarán en tu perfil para que los clientes vean tu experiencia.
+                </p>
+                <div class="form-group">
+                  <input
+                    type="file"
+                    accept="image/jpeg,image/png,image/webp,image/gif"
+                    multiple
+                    class="input-file"
+                    @change="onFotosTrabajoChange"
+                  />
+                </div>
+                <div v-if="imagenesTrabajoBase64.length > 0" class="fotos-preview">
+                  <div v-for="(img, i) in imagenesTrabajoBase64" :key="i" class="foto-preview-item">
+                    <img :src="img" alt="Trabajo" class="foto-preview-img" />
+                    <button type="button" class="foto-remove" @click="quitarFotoTrabajo(i)" title="Quitar">×</button>
+                  </div>
+                </div>
+                <p v-else class="small" style="color: #94a3b8;">Aún no agregaste fotos. Podés continuar sin subir ninguna.</p>
+              </div>
+            </template>
           </Wizard>
 
           <!-- Enlace a login -->
@@ -560,7 +611,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, watch } from 'vue'
+import { ref, computed, onMounted, watch, nextTick } from 'vue'
 import { useRouter } from 'vue-router'
 import { profesionalService } from '../services/profesionalService'
 import { useProfessionalRegistrationForm } from '../composables/useForm'
@@ -597,6 +648,7 @@ const cargandoCategorias = ref(false)
 const currentStep = ref(1)
 const fileInput = ref<HTMLInputElement | null>(null)
 const busquedaServicios = ref('')
+const errorGeneralRef = ref<HTMLElement | null>(null)
 
 // Métodos de pago
 const metodosPago = [
@@ -663,44 +715,76 @@ const generarCodigoPago = () => {
   })
 }
 
+// Foto de perfil (opcional, paso 1)
+const fotoPerfilBase64 = ref<string | null>(null)
+const fileInputFotoPerfil = ref<HTMLInputElement | null>(null)
+
+// Fotos de trabajos realizados (opcional)
+const imagenesTrabajoBase64 = ref<string[]>([])
+
 // Wizard steps
 const wizardSteps = [
   { label: 'Datos Personales' },
   { label: 'Oficio/Profesión' },
-  { label: 'Pago' }
+  { label: 'Pago' },
+  { label: 'Fotos (opcional)' }
 ]
 
-// Validar si se puede avanzar al siguiente paso
-const canProceedToNext = computed(() => {
-  if (currentStep.value === 1) {
-    // Validar datos personales
-    return formulario && formulario.nombre && 
-           formulario.apellido && 
-           formulario.email && 
-           formulario.password && 
-           formulario.confirmarPassword &&
-           formulario.ciudad && 
-           formulario.provincia &&
-           errores && !errores.nombre &&
-           !errores.apellido &&
-           !errores.email &&
-           !errores.password &&
-           !errores.confirmarPassword &&
-           !errores.ciudad &&
-           !errores.provincia
-  } else if (currentStep.value === 2) {
-    // Validar datos del oficio
-    return tipoServicio.value !== null && 
-           formulario?.oficios && Array.isArray(formulario.oficios) && 
-           formulario.oficios.length > 0
-  } else if (currentStep.value === 3) {
-    // Validar plan, método de pago y términos
-    return planSeleccionado.value !== null &&
-           metodoPagoSeleccionado.value !== null && 
-           formulario?.aceptaTerminos === true
+const MENSAJE_OBLIGATORIO = 'Campo obligatorio'
+
+/** Valida el paso actual al intentar avanzar. Marca en rojo los campos vacíos y retorna false si hay errores. */
+function validarPasoActual (step: number): boolean {
+  if (step === 1) {
+    let valido = true
+    if (!formulario?.nombre?.trim()) { setError('nombre', MENSAJE_OBLIGATORIO); valido = false } else { setError('nombre', '') }
+    if (!formulario?.apellido?.trim()) { setError('apellido', MENSAJE_OBLIGATORIO); valido = false } else { setError('apellido', '') }
+    if (!formulario?.email?.trim()) { setError('email', MENSAJE_OBLIGATORIO); valido = false } else { setError('email', '') }
+    if (!formulario?.password) { setError('password', MENSAJE_OBLIGATORIO); valido = false } else { setError('password', '') }
+    if (!formulario?.confirmarPassword) { setError('confirmarPassword', MENSAJE_OBLIGATORIO); valido = false } else { setError('confirmarPassword', '') }
+    if (!formulario?.provincia?.trim()) { setError('provincia', MENSAJE_OBLIGATORIO); valido = false } else { setError('provincia', '') }
+    if (!formulario?.ciudad?.trim()) { setError('ciudad', MENSAJE_OBLIGATORIO); valido = false } else { setError('ciudad', '') }
+    return valido
   }
-  return false
-})
+  if (step === 2) {
+    let valido = true
+    if (tipoServicio.value === null) {
+      setError('general', 'Seleccioná el tipo de servicio (Oficiante o Profesional).')
+      valido = false
+    } else {
+      setError('general', '')
+    }
+    if (!formulario?.oficios?.length) {
+      setError('oficios', 'Debes seleccionar al menos un oficio o categoría.')
+      valido = false
+    } else {
+      setError('oficios', '')
+    }
+    return valido
+  }
+  if (step === 3) {
+    let valido = true
+    if (!planSeleccionado.value) {
+      setError('plan', 'Seleccioná un plan de suscripción.')
+      valido = false
+    } else {
+      setError('plan', '')
+    }
+    if (!metodoPagoSeleccionado.value) {
+      setError('metodoPago', 'Seleccioná un método de pago.')
+      valido = false
+    } else {
+      setError('metodoPago', '')
+    }
+    if (!formulario?.aceptaTerminos) {
+      setError('aceptaTerminos', 'Debes aceptar los términos y condiciones y la política de privacidad.')
+      valido = false
+    } else {
+      setError('aceptaTerminos', '')
+    }
+    return valido
+  }
+  return true // Paso 4: sin campos obligatorios
+}
 
 // Función para normalizar texto (remover acentos para búsqueda más flexible)
 const normalizeText = (text: string): string => {
@@ -899,15 +983,17 @@ const verificarEmail = async () => {
   }
 
   emailVerificando.value = true
+  setError('email', '') // limpiar error previo
   try {
     const { useAuthStore } = await import('../stores/auth')
     const authStore = useAuthStore()
     const disponible = await authStore.verificarEmail(formulario.email)
-    if (!disponible) {
+    if (disponible === false) {
       setError('email', 'Este email ya está registrado')
     }
-  } catch (error) {
-    // Error silencioso
+  } catch {
+    // Error de red o del servidor: no mostramos "ya registrado" para no confundir
+    setError('email', 'No se pudo verificar el email. Revisá la conexión o intentá más tarde.')
   } finally {
     emailVerificando.value = false
   }
@@ -1003,7 +1089,9 @@ const registrarProfesional = async () => {
         codigoPago: (metodoPagoSeleccionado.value === 'rapipago' || metodoPagoSeleccionado.value === 'pagosfaciles') 
           ? codigoPago.value 
           : undefined,
-        mesesSuscripcion: mesesSuscripcion.value
+        mesesSuscripcion: mesesSuscripcion.value,
+        fotoPerfilBase64: fotoPerfilBase64.value || undefined,
+        imagenesTrabajoBase64: imagenesTrabajoBase64.value?.length ? imagenesTrabajoBase64.value : undefined
       }
 
       await profesionalService.registrar(datosProfesional)
@@ -1012,13 +1100,94 @@ const registrarProfesional = async () => {
       alert(MESSAGES.SUCCESS.PROFESSIONAL_REGISTERED)
       router.push(ROUTES.HOME)
     } catch (error: any) {
-      const errorMessage = error.response?.data?.message || 
-                          error.response?.data?.error || 
-                          error.message || 
+      const errorMessage = error.response?.data?.message ||
+                          error.response?.data?.error ||
+                          error.message ||
                           MESSAGES.ERROR.GENERAL
       setError('general', errorMessage)
+      nextTick(() => {
+        errorGeneralRef.value?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+      })
+      console.error('Error al registrar profesional:', errorMessage, error.response?.data)
     }
   }
+}
+
+const MAX_FOTOS_TRABAJO = 10
+const MAX_SIZE_MB = 3
+
+function readFileAsDataUrl (file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onload = () => resolve((reader.result as string) || '')
+    reader.onerror = () => reject(reader.error)
+    reader.readAsDataURL(file)
+  })
+}
+
+async function onFotoPerfilChange (e: Event) {
+  const input = e.target as HTMLInputElement
+  const file = input.files?.[0]
+  if (!file || !file.type.startsWith('image/')) return
+  if (file.size > MAX_SIZE_MB * 1024 * 1024) {
+    alert(`La imagen no debe superar ${MAX_SIZE_MB} MB.`)
+    input.value = ''
+    return
+  }
+  const dataUrl = await readFileAsDataUrl(file)
+  if (!dataUrl) return
+  try {
+    await profesionalService.validarImagenes([dataUrl])
+    fotoPerfilBase64.value = dataUrl
+    setError('general', '')
+  } catch (err: any) {
+    const msg = err?.response?.data?.message ?? err?.message ?? 'La imagen no cumple las normas de la comunidad.'
+    setError('general', msg)
+  }
+  input.value = ''
+}
+
+function quitarFotoPerfil () {
+  fotoPerfilBase64.value = null
+  if (fileInputFotoPerfil.value) fileInputFotoPerfil.value.value = ''
+  setError('general', '')
+}
+
+async function onFotosTrabajoChange (e: Event) {
+  const input = e.target as HTMLInputElement
+  const files = input.files
+  if (!files?.length) return
+  const remaining = MAX_FOTOS_TRABAJO - imagenesTrabajoBase64.value.length
+  if (remaining <= 0) {
+    alert(`Podés subir hasta ${MAX_FOTOS_TRABAJO} fotos.`)
+    input.value = ''
+    return
+  }
+  const toAdd = Math.min(remaining, files.length)
+  for (let i = 0; i < toAdd; i++) {
+    const file = files[i]
+    if (!file.type.startsWith('image/')) continue
+    if (file.size > MAX_SIZE_MB * 1024 * 1024) {
+      alert(`La imagen ${file.name} supera ${MAX_SIZE_MB} MB.`)
+      continue
+    }
+    try {
+      const dataUrl = await readFileAsDataUrl(file)
+      if (!dataUrl) continue
+      await profesionalService.validarImagenes([dataUrl])
+      imagenesTrabajoBase64.value.push(dataUrl)
+      setError('general', '')
+    } catch (err: any) {
+      const msg = err?.response?.data?.message ?? err?.message ?? `La imagen "${file.name}" no cumple las normas de la comunidad.`
+      setError('general', msg)
+    }
+  }
+  input.value = ''
+}
+
+function quitarFotoTrabajo (index: number) {
+  imagenesTrabajoBase64.value.splice(index, 1)
+  setError('general', '')
 }
 
 const irAHome = () => {
@@ -1064,34 +1233,42 @@ const validateFile = (file: File): boolean => {
   return true
 }
 
-const handleFileChange = (event: Event) => {
-  const target = event.target as HTMLInputElement
-  if (target.files && target.files.length > 0) {
-    Array.from(target.files).forEach(file => {
-      if (validateFile(file)) {
-        documentos.value.push({
-          nombre: file.name,
-          archivo: file,
-          tamano: formatFileSize(file.size)
-        })
-      }
-    })
+const isImageType = (file: File) => file.type === 'image/jpeg' || file.type === 'image/jpg' || file.type === 'image/png'
+
+async function addDocumentoIfValid (file: File): Promise<boolean> {
+  if (!validateFile(file)) return false
+  if (isImageType(file)) {
+    try {
+      const dataUrl = await readFileAsDataUrl(file)
+      await profesionalService.validarImagenes([dataUrl])
+    } catch (err: any) {
+      const msg = err?.response?.data?.message ?? err?.message ?? `La imagen "${file.name}" no cumple las normas de la comunidad.`
+      setError('documentos', msg)
+      return false
+    }
   }
-  isDragging.value = false
+  setError('documentos', '')
+  documentos.value.push({ nombre: file.name, archivo: file, tamano: formatFileSize(file.size) })
+  return true
 }
 
-const handleFileDrop = (event: DragEvent) => {
+async function handleFileChange (event: Event) {
+  const target = event.target as HTMLInputElement
+  if (target.files && target.files.length > 0) {
+    for (const file of Array.from(target.files)) {
+      await addDocumentoIfValid(file)
+    }
+  }
+  isDragging.value = false
+  target.value = ''
+}
+
+async function handleFileDrop (event: DragEvent) {
   const files = event.dataTransfer?.files
   if (files && files.length > 0) {
-    Array.from(files).forEach(file => {
-      if (validateFile(file)) {
-        documentos.value.push({
-          nombre: file.name,
-          archivo: file,
-          tamano: formatFileSize(file.size)
-        })
-      }
-    })
+    for (const file of Array.from(files)) {
+      await addDocumentoIfValid(file)
+    }
   }
   isDragging.value = false
 }
@@ -1318,6 +1495,13 @@ const abrirSelectorArchivos = () => {
   grid-template-columns: repeat(2, 1fr);
   gap: 16px;
   margin-bottom: 24px;
+}
+
+.payment-methods.error-border {
+  padding: 4px;
+  border-radius: 12px;
+  border: 2px solid #ef4444;
+  background: #fef2f2;
 }
 
 .payment-method {
@@ -1596,6 +1780,28 @@ input.error, textarea.error {
   display: block;
 }
 
+.error-general-box {
+  text-align: center;
+  margin-bottom: 16px;
+  padding: 12px 16px;
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  border-radius: 8px;
+}
+
+.error-general-box .error-hint {
+  margin: 8px 0 0;
+  font-size: 0.8rem;
+  color: #b91c1c;
+}
+
+.error-border-wrap {
+  padding: 8px;
+  border-radius: 8px;
+  border: 2px solid #ef4444;
+  background: #fef2f2;
+}
+
 /* Estilos para planes de suscripción */
 .planes-container {
   display: grid;
@@ -1693,6 +1899,86 @@ input.error, textarea.error {
   border-color: var(--brand);
   background: #f0f9ff;
   box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+/* Paso 4: Fotos de trabajos */
+.input-file {
+  width: 100%;
+  padding: 12px;
+  border: 2px dashed #cbd5e1;
+  border-radius: 8px;
+  background: #f8fafc;
+  cursor: pointer;
+  font-size: 14px;
+}
+.input-file:hover {
+  border-color: var(--brand);
+  background: #f0f9ff;
+}
+.fotos-preview {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+  gap: 12px;
+  margin-top: 16px;
+}
+.foto-preview-item {
+  position: relative;
+  aspect-ratio: 1;
+  border-radius: 8px;
+  overflow: hidden;
+  border: 1px solid #e2e8f0;
+}
+.foto-preview-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.foto-remove {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  border: none;
+  background: rgba(0,0,0,0.6);
+  color: white;
+  cursor: pointer;
+  font-size: 18px;
+  line-height: 1;
+  padding: 0;
+}
+.foto-remove:hover {
+  background: #ef4444;
+}
+
+.foto-perfil-preview {
+  margin-top: 12px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+.foto-perfil-preview img {
+  width: 80px;
+  height: 80px;
+  object-fit: cover;
+  border-radius: 50%;
+  border: 2px solid #e2e8f0;
+}
+.btn-quitar-foto {
+  padding: 6px 12px;
+  font-size: 13px;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  background: #f8fafc;
+  color: #64748b;
+  cursor: pointer;
+}
+.btn-quitar-foto:hover {
+  background: #fee2e2;
+  color: #dc2626;
+  border-color: #fecaca;
 }
 
 .duracion-label {

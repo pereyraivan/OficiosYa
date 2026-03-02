@@ -5,7 +5,11 @@ using OficiosYa.Domain.Interfaces;
 using OficiosYa.Application.Mappings;
 using MediatR;
 using System.Reflection;
+using System.Text;
 using System.Text.Encodings.Web;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.IdentityModel.Tokens;
+using OficiosYa.Web.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -29,7 +33,8 @@ builder.Services.AddControllers()
 
 // Configurar Entity Framework
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
-    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
+    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection"))
+        .ConfigureWarnings(w => w.Ignore(Microsoft.EntityFrameworkCore.Diagnostics.RelationalEventId.PendingModelChangesWarning)));
 
 // Registrar Repositories
 builder.Services.AddScoped(typeof(IRepository<>), typeof(Repository<>));
@@ -42,6 +47,51 @@ builder.Services.AddScoped<IPlanSuscripcionRepository, PlanSuscripcionRepository
 
 // Registrar Services
 builder.Services.AddScoped<OficiosYa.Application.Services.IPlanSuscripcionService, OficiosYa.Application.Services.PlanSuscripcionService>();
+builder.Services.AddHttpClient<IOpenAIModerationService, OpenAIModerationService>();
+builder.Services.AddHttpClient<IImageModerationService, SightengineImageModerationService>();
+
+// JWT
+builder.Services.AddScoped<JwtTokenService>();
+var jwtSecret = builder.Configuration["Jwt:SecretKey"] ?? "OficiosYa_SecretKey_Minimo32Caracteres_ParaProduccionCambiar";
+var jwtKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSecret));
+builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+    .AddJwtBearer(options =>
+    {
+        options.TokenValidationParameters = new TokenValidationParameters
+        {
+            ValidateIssuerSigningKey = true,
+            IssuerSigningKey = jwtKey,
+            ValidateIssuer = true,
+            ValidIssuer = builder.Configuration["Jwt:Issuer"] ?? "OficiosYa",
+            ValidateAudience = true,
+            ValidAudience = builder.Configuration["Jwt:Audience"] ?? "OficiosYa",
+            ValidateLifetime = true,
+            ClockSkew = TimeSpan.Zero
+        };
+    });
+
+// Configurar Swagger/OpenAPI (solo en desarrollo)
+builder.Services.AddEndpointsApiExplorer();
+builder.Services.AddSwaggerGen(c =>
+{
+    c.AddSecurityDefinition("Bearer", new Microsoft.OpenApi.Models.OpenApiSecurityScheme
+    {
+        Description = "JWT: Bearer {token}",
+        Name = "Authorization",
+        In = Microsoft.OpenApi.Models.ParameterLocation.Header,
+        Type = Microsoft.OpenApi.Models.SecuritySchemeType.ApiKey
+    });
+    c.AddSecurityRequirement(new Microsoft.OpenApi.Models.OpenApiSecurityRequirement
+    {
+        {
+            new Microsoft.OpenApi.Models.OpenApiSecurityScheme
+            {
+                Reference = new Microsoft.OpenApi.Models.OpenApiReference { Type = Microsoft.OpenApi.Models.ReferenceType.SecurityScheme, Id = "Bearer" }
+            },
+            Array.Empty<string>()
+        }
+    });
+});
 
 // Configurar MediatR
 builder.Services.AddMediatR(cfg => cfg.RegisterServicesFromAssembly(Assembly.GetExecutingAssembly()));
@@ -92,6 +142,12 @@ app.UseStaticFiles();
 
 app.UseRouting();
 
+if (app.Environment.IsDevelopment())
+{
+    app.UseSwagger();
+    app.UseSwaggerUI(c => c.SwaggerEndpoint("/swagger/v1/swagger.json", "OficiosYa API v1"));
+}
+
 // Middleware para asegurar charset UTF-8 en respuestas JSON (antes de escribir la respuesta)
 app.Use(async (context, next) =>
 {
@@ -114,6 +170,7 @@ app.Use(async (context, next) =>
 // Usar CORS - debe estar después de UseRouting y antes de UseAuthorization
 app.UseCors("AllowVueApp");
 
+app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapStaticAssets();

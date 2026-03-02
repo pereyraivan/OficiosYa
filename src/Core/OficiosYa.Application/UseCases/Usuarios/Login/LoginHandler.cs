@@ -9,18 +9,20 @@ namespace OficiosYa.Application.UseCases.Usuarios.Login
     public class LoginHandler : IRequestHandler<LoginCommand, LoginResponse>
     {
         private readonly IUsuarioRepository _usuarioRepository;
+        private readonly IProfesionalRepository _profesionalRepository;
         private readonly IMapper _mapper;
 
-        public LoginHandler(IUsuarioRepository usuarioRepository, IMapper mapper)
+        public LoginHandler(IUsuarioRepository usuarioRepository, IProfesionalRepository profesionalRepository, IMapper mapper)
         {
             _usuarioRepository = usuarioRepository;
+            _profesionalRepository = profesionalRepository;
             _mapper = mapper;
         }
 
         public async Task<LoginResponse> Handle(LoginCommand request, CancellationToken cancellationToken)
         {
             var usuario = await _usuarioRepository.GetByEmailAsync(request.Request.Email);
-            
+
             if (usuario == null || !usuario.Activo)
             {
                 return new LoginResponse
@@ -39,23 +41,16 @@ namespace OficiosYa.Application.UseCases.Usuarios.Login
                 };
             }
 
-            // Aquí podrías generar un JWT token
-            var token = GenerateJwtToken(usuario);
+            var usuarioResponse = _mapper.Map<UsuarioResponse>(usuario);
+            usuarioResponse.EsAdmin = usuario.EsAdmin;
+            usuarioResponse.EsProfesional = (await _profesionalRepository.GetByUsuarioIdAsync(usuario.Id)) != null;
 
             return new LoginResponse
             {
                 Success = true,
-                Token = token,
-                Usuario = _mapper.Map<UsuarioResponse>(usuario),
+                Usuario = usuarioResponse,
                 Message = "Login exitoso"
             };
-        }
-
-        private string GenerateJwtToken(Domain.Entities.Usuario usuario)
-        {
-            // Implementación básica de JWT
-            // En un proyecto real, usarías JWT Bearer tokens
-            return $"jwt_token_for_user_{usuario.Id}_{DateTime.UtcNow.Ticks}";
         }
     }
 }

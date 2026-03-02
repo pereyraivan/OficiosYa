@@ -1,5 +1,5 @@
 <template>
-  <div class="wizard">
+  <div ref="wizardRootRef" class="wizard">
     <!-- Indicador de pasos -->
     <div class="wizard-steps">
       <div 
@@ -48,7 +48,7 @@
         v-else
         type="button"
         class="btn-primary"
-        @click="$emit('finish')"
+        @click="onFinishClick"
         :disabled="!canProceed"
       >
         Finalizar
@@ -58,7 +58,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, nextTick } from 'vue'
 
 interface Step {
   label: string
@@ -67,6 +67,8 @@ interface Step {
 interface Props {
   steps: Step[]
   canProceed?: boolean
+  /** Si está definida, se llama al hacer clic en Siguiente/Finalizar. Si retorna false (o Promise<false>), no se avanza. */
+  validateBeforeNext?: (step: number) => boolean | Promise<boolean>
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -80,18 +82,42 @@ const emit = defineEmits<{
 
 const currentStep = ref(1)
 const totalSteps = computed(() => props.steps.length)
+const wizardRootRef = ref<HTMLElement | null>(null)
 
-const nextStep = () => {
-  if (currentStep.value < totalSteps.value) {
-    currentStep.value++
-    emit('stepChange', currentStep.value)
+function scrollToStepTop () {
+  nextTick(() => {
+    if (wizardRootRef.value) {
+      wizardRootRef.value.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    } else {
+      window.scrollTo({ top: 0, behavior: 'smooth' })
+    }
+  })
+}
+
+const nextStep = async () => {
+  if (currentStep.value >= totalSteps.value) return
+  if (props.validateBeforeNext) {
+    const ok = await Promise.resolve(props.validateBeforeNext(currentStep.value))
+    if (!ok) return
   }
+  currentStep.value++
+  emit('stepChange', currentStep.value)
+  scrollToStepTop()
+}
+
+const onFinishClick = async () => {
+  if (props.validateBeforeNext) {
+    const ok = await Promise.resolve(props.validateBeforeNext(currentStep.value))
+    if (!ok) return
+  }
+  emit('finish')
 }
 
 const prevStep = () => {
   if (currentStep.value > 1) {
     currentStep.value--
     emit('stepChange', currentStep.value)
+    scrollToStepTop()
   }
 }
 
@@ -99,6 +125,7 @@ const goToStep = (step: number) => {
   if (step >= 1 && step <= totalSteps.value) {
     currentStep.value = step
     emit('stepChange', currentStep.value)
+    scrollToStepTop()
   }
 }
 

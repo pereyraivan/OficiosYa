@@ -1,7 +1,13 @@
 import api from './api'
-import type { Profesional, BuscarProfesionalesRequest, RegistrarProfesionalRequest, ApiResponse, CategoriaServicio } from '../types'
+import type { Profesional, BuscarProfesionalesRequest, RegistrarProfesionalRequest, ApiResponse, CategoriaServicio, ZonaCoberturaDto, SuscripcionActiva, Resena, CrearResenaRequest } from '../types'
 
 export const profesionalService = {
+  // Validar imágenes (moderación) antes de subir. Lanza si no pasan.
+  async validarImagenes(imagenesBase64: string[]): Promise<{ aprobado: boolean }> {
+    const response = await api.post<{ aprobado: boolean }>('/profesionales/validar-imagenes', { imagenesBase64 })
+    return response.data
+  },
+
   // Registrar profesional
   async registrar(datos: RegistrarProfesionalRequest): Promise<Profesional> {
     const response = await api.post<Profesional>('/profesionales/registrar', datos)
@@ -103,10 +109,15 @@ export const profesionalService = {
     }
   },
 
-  // Obtener profesional por ID
+  // Obtener profesional por ID (acepta respuesta con { data } o el objeto directo)
   async obtenerPorId(id: number): Promise<Profesional> {
-    const response = await api.get<ApiResponse<Profesional>>(`/profesionales/${id}`)
-    return response.data.data
+    const response = await api.get(`/profesionales/${id}`)
+    const body = response.data
+    const data = body?.data ?? body
+    if (!data) {
+      throw new Error('No se recibieron datos del profesional')
+    }
+    return data as Profesional
   },
 
   // Obtener profesionales por oficio
@@ -131,5 +142,36 @@ export const profesionalService = {
     } catch (error: any) {
       return []
     }
+  },
+
+  /** Perfil del profesional autenticado (para el panel). Requiere token. */
+  async obtenerMiPerfil(): Promise<Profesional & { suscripcionActiva?: SuscripcionActiva | null }> {
+    const response = await api.get<{ success: boolean; data: any }>('/profesionales/mi-perfil')
+    const data = response.data?.data ?? response.data
+    if (!data) throw new Error('No se recibieron datos del perfil.')
+    return data as Profesional & { suscripcionActiva?: SuscripcionActiva | null }
+  },
+
+  /** Actualizar perfil del profesional (descripción, disponible, foto, zonas, categorías). */
+  async actualizarMiPerfil(payload: {
+    descripcion?: string
+    disponible?: boolean
+    fotoPerfilBase64?: string
+    zonasCobertura?: ZonaCoberturaDto[]
+    oficios?: string[]
+  }): Promise<void> {
+    await api.put('/profesionales/mi-perfil', payload)
+  },
+
+  /** Listar reseñas de un profesional. */
+  async listarResenas(profesionalId: number): Promise<Resena[]> {
+    const response = await api.get<Resena[]>(`/profesionales/${profesionalId}/resenas`)
+    return Array.isArray(response.data) ? response.data : []
+  },
+
+  /** Crear reseña para un profesional (con o sin login). */
+  async crearResena(profesionalId: number, datos: CrearResenaRequest): Promise<Resena> {
+    const response = await api.post<Resena>(`/profesionales/${profesionalId}/resenas`, datos)
+    return response.data
   }
 }

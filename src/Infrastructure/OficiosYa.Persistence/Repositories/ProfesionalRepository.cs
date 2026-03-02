@@ -40,9 +40,8 @@ namespace OficiosYa.Persistence.Repositories
 
             if (!string.IsNullOrWhiteSpace(termino))
             {
-                query = query.Where(p => p.Descripcion.Contains(termino) || 
-                                       p.Usuario.Nombre.Contains(termino) || 
-                                       p.Usuario.Apellido.Contains(termino));
+                query = query.Where(p => p.Descripcion.Contains(termino) ||
+                                       (p.Usuario != null && (p.Usuario.Nombre.Contains(termino) || p.Usuario.Apellido.Contains(termino))));
             }
 
             if (oficioId.HasValue)
