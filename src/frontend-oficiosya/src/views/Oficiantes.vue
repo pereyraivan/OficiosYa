@@ -68,7 +68,13 @@
                 📍 {{ profesional.usuario.ciudad }}
               </p>
               <div v-if="profesional.calificacionPromedio" class="profesional-rating">
-                <span class="stars">★★★★★</span>
+                <span
+                  v-for="n in 5"
+                  :key="n"
+                  class="rating-star"
+                  :class="claseEstrella(n, profesional.calificacionPromedio)"
+                  aria-hidden="true"
+                >★</span>
                 <span class="rating-value">{{ profesional.calificacionPromedio.toFixed(1) }}</span>
                 <span class="rating-count">({{ profesional.totalResenas || 0 }} reseñas)</span>
               </div>
@@ -198,6 +204,11 @@ const criteriosBusqueda = ref({
 
 // Mostrar resultados cuando ya se hizo al menos una búsqueda (lista todos o con filtros)
 const mostrarResultados = computed(() => busquedaRealizada.value)
+
+function claseEstrella (n: number, rating: number | undefined) {
+  const r = Math.min(5, Math.max(0, Number(rating ?? 0)))
+  return { filled: r >= n, half: r >= n - 0.5 && r < n }
+}
 
 // Métodos de navegación
 const irAInicio = () => {
@@ -436,6 +447,29 @@ onMounted(() => {
   margin-top: 8px;
 }
 
+.rating-star {
+  display: inline-block;
+  font-size: 0.9rem;
+  color: transparent;
+  -webkit-text-stroke: 1.2px #cbd5e1;
+}
+.rating-star.filled {
+  color: #f59e0b;
+  -webkit-text-stroke: 0;
+}
+.rating-star.half {
+  position: relative;
+}
+.rating-star.half::before {
+  content: '★';
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 50%;
+  overflow: hidden;
+  color: #f59e0b;
+  -webkit-text-stroke: 0;
+}
 .stars {
   color: #fbbf24;
   font-size: 0.9rem;

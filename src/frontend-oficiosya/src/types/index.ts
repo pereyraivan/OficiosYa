@@ -2,12 +2,15 @@
 export interface Usuario {
   id: number
   nombre: string
+  apellido?: string
   email: string
   telefono?: string
-  fechaRegistro: string
-  esProfesional: boolean
+  fechaRegistro?: string
+  esProfesional?: boolean
   esAdmin?: boolean
-  activo: boolean
+  activo?: boolean
+  ciudad?: string
+  provincia?: string
   /** ID del perfil profesional cuando el usuario es profesional (viene en /usuarios/perfil). */
   profesionalId?: number
 }
@@ -77,6 +80,7 @@ export interface Profesional {
 }
 
 export interface BuscarProfesionalesRequest {
+  termino?: string
   oficio?: string
   zona?: string
   radio?: number

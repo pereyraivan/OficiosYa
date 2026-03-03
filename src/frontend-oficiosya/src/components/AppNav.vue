@@ -30,6 +30,7 @@
             <router-link to="/publicar-trabajo" class="nav-link" :class="{ active: isActive('/publicar-trabajo') }">Publicar empleo</router-link>
           </div>
         </div>
+        <router-link to="/dejar-resena" class="nav-link" :class="{ active: route.path === '/dejar-resena' || route.path.startsWith('/dejar-resena/') }">Dejá tu reseña</router-link>
         <router-link to="/#como-funciona" class="nav-link">Cómo funciona</router-link>
         <router-link v-if="authStore.estaAutenticado" to="/mi-panel" class="nav-link" :class="{ active: isActive('/mi-panel') }">Mi panel</router-link>
         <template v-if="authStore.estaAutenticado">

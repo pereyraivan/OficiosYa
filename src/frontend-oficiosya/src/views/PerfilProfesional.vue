@@ -55,7 +55,16 @@
               </div>
               <div class="perfil-meta">
                 <div v-if="(profesional.calificacionPromedio ?? 0) > 0" class="perfil-rating">
-                  <span class="stars">★</span>
+                  <span
+                    v-for="n in 5"
+                    :key="n"
+                    class="rating-star"
+                    :class="{
+                      filled: ratingPromedio >= n,
+                      half: ratingPromedio >= n - 0.5 && ratingPromedio < n
+                    }"
+                    aria-hidden="true"
+                  >★</span>
                   <span class="rating-num">{{ Number(profesional.calificacionPromedio).toFixed(1) }}</span>
                   <span class="rating-count">({{ profesional.totalResenas ?? 0 }} reseñas)</span>
                 </div>
@@ -272,6 +281,11 @@ const textoUbicacion = computed(() => {
 
 const imagenesTrabajo = computed(() => {
   return profesional.value?.imagenesTrabajo || []
+})
+
+const ratingPromedio = computed(() => {
+  const v = Number(profesional.value?.calificacionPromedio ?? 0)
+  return Math.min(5, Math.max(0, v))
 })
 
 const carouselIndex = ref(0)
@@ -584,11 +598,31 @@ onMounted(cargarPerfil)
 .perfil-rating {
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: 2px;
   font-size: 0.9375rem;
 }
-.perfil-rating .stars {
+.perfil-rating .rating-star {
+  display: inline-block;
+  font-size: 1rem;
+  color: transparent;
+  -webkit-text-stroke: 1.2px #cbd5e1;
+}
+.perfil-rating .rating-star.filled {
   color: #f59e0b;
+  -webkit-text-stroke: 0;
+}
+.perfil-rating .rating-star.half {
+  position: relative;
+}
+.perfil-rating .rating-star.half::before {
+  content: '★';
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 50%;
+  overflow: hidden;
+  color: #f59e0b;
+  -webkit-text-stroke: 0;
 }
 .rating-num {
   font-weight: 600;
@@ -801,13 +835,17 @@ onMounted(cargarPerfil)
 }
 .resena-stars {
   margin-bottom: 6px;
+  display: flex;
+  gap: 2px;
 }
 .resena-star {
-  color: #e2e8f0;
   font-size: 1rem;
+  color: transparent;
+  -webkit-text-stroke: 1.2px #cbd5e1;
 }
 .resena-star.filled {
   color: #f59e0b;
+  -webkit-text-stroke: 0;
 }
 .resena-comentario {
   margin: 0;

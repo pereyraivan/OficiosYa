@@ -13,6 +13,7 @@ import PublicarTrabajo from '../views/PublicarTrabajo.vue'
 import EmpleosPublicados from '../views/EmpleosPublicados.vue'
 import DetalleEmpleo from '../views/DetalleEmpleo.vue'
 import PanelProfesional from '../views/PanelProfesional.vue'
+import DejarResena from '../views/DejarResena.vue'
 import { useAuthStore } from '../stores/auth'
 
 const routes = [
@@ -45,6 +46,21 @@ const routes = [
     path: '/profesional/:id',
     name: 'PerfilProfesional',
     component: PerfilProfesional
+  },
+  {
+    path: '/dejar-resena',
+    name: 'DejarResena',
+    component: DejarResena
+  },
+  {
+    path: '/dejar-resena/:id',
+    name: 'DejarResenaId',
+    component: DejarResena
+  },
+  {
+    path: '/r/:id',
+    name: 'LinkCortoResena',
+    redirect: (to) => ({ name: 'DejarResenaId', params: { id: to.params.id } })
   },
   {
     path: '/mi-panel',

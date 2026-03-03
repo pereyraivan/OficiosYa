@@ -82,6 +82,22 @@
                 </button>
               </form>
               <p class="hint">Para cambiar tu nombre, teléfono o ubicación podés contactar a soporte o usar la opción cuando esté disponible.</p>
+
+              <div v-if="miPerfil?.id" class="link-resenas-box">
+                <h3 class="link-resenas-titulo">Link para que te dejen reseñas</h3>
+                <p class="link-resenas-desc">Compartí este link con tus clientes (por WhatsApp, email o tarjeta) para que te dejen su opinión en OficiosYa.</p>
+                <div class="link-resenas-row">
+                  <input
+                    type="text"
+                    :value="linkDejarResena"
+                    readonly
+                    class="input-link-resenas"
+                  />
+                  <button type="button" class="btn-cta-outline btn-copiar" @click="copiarLinkResena">
+                    {{ linkCopiado ? 'Copiado' : 'Copiar' }}
+                  </button>
+                </div>
+              </div>
             </section>
 
             <!-- Pestaña Suscripción -->
@@ -177,6 +193,25 @@ const categoriasDisponibles = ref<Array<{ id: number; nombre: string; tipo?: str
 const cargandoCategorias = ref(false)
 
 const suscripcionActiva = computed(() => miPerfil.value && (miPerfil.value as any).suscripcionActiva ? (miPerfil.value as any).suscripcionActiva : null)
+
+const linkDejarResena = computed(() => {
+  const id = miPerfil.value?.id
+  if (!id) return ''
+  const base = typeof window !== 'undefined' ? window.location.origin : ''
+  return `${base}/dejar-resena/${id}`
+})
+
+const linkCopiado = ref(false)
+function copiarLinkResena () {
+  const link = linkDejarResena.value
+  if (!link) return
+  if (navigator.clipboard?.writeText) {
+    navigator.clipboard.writeText(link).then(() => {
+      linkCopiado.value = true
+      setTimeout(() => { linkCopiado.value = false }, 2000)
+    })
+  }
+}
 
 const API_BASE = (import.meta.env.VITE_API_URL || 'http://localhost:5230/api').replace(/\/api\/?$/, '')
 
@@ -546,6 +581,41 @@ watch(() => authStore.estaAutenticado, (autenticado) => {
   font-size: 0.875rem;
   color: #64748b;
   margin-top: 12px;
+}
+
+.link-resenas-box {
+  margin-top: 28px;
+  padding-top: 24px;
+  border-top: 1px solid #e2e8f0;
+}
+.link-resenas-titulo {
+  font-size: 1rem;
+  font-weight: 600;
+  color: #0f172a;
+  margin: 0 0 8px 0;
+}
+.link-resenas-desc {
+  font-size: 0.9375rem;
+  color: #64748b;
+  margin: 0 0 12px 0;
+}
+.link-resenas-row {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.input-link-resenas {
+  flex: 1;
+  min-width: 200px;
+  padding: 10px 14px;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  font-size: 0.875rem;
+  background: #f8fafc;
+  color: #0f172a;
+}
+.btn-copiar {
+  flex-shrink: 0;
 }
 
 .suscripcion-card {

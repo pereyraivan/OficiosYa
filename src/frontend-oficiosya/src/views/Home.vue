@@ -49,7 +49,13 @@
                     <div class="professional-name">{{ profesional.usuario?.nombre }}</div>
                     <div class="professional-details">{{ profesional.oficios?.[0]?.nombre || 'Electricista' }}</div>
                     <div class="professional-rating">
-                      <span class="stars">★★★★★</span>
+                      <span
+                        v-for="n in 5"
+                        :key="n"
+                        class="rating-star"
+                        :class="claseEstrella(n, profesional.calificacionPromedio)"
+                        aria-hidden="true"
+                      >★</span>
                       <span class="rating-text">({{ profesional.totalResenas ?? 0 }} reseñas)</span>
                     </div>
                     <p v-if="profesional.resenas?.length && profesional.resenas[0].comentario" class="professional-resena-preview">
@@ -115,8 +121,14 @@
                     <small class="text-muted">San Miguel de Tucumán · Tucumán</small>
                   </div>
                 </div>
-                <div class="mb-2">
-                  <span class="stars">★★★★★</span> 
+                <div class="mb-2 d-flex align-items-center gap-1">
+                  <span
+                    v-for="n in 5"
+                    :key="n"
+                    class="rating-star"
+                    :class="claseEstrella(n, profesional.calificacionPromedio)"
+                    aria-hidden="true"
+                  >★</span>
                   <span class="ms-1">{{ (profesional.calificacionPromedio ?? 0).toFixed(1) }} ({{ profesional.totalResenas ?? 0 }} reseñas)</span>
                 </div>
                 <p v-if="profesional.resenas?.length && profesional.resenas[0].comentario" class="pro-resena-real small text-muted mb-2">
@@ -328,6 +340,11 @@ const cerrarSesion = () => {
 
 const verPerfil = (id: number) => {
   router.push({ name: 'PerfilProfesional', params: { id: String(id) } })
+}
+
+function claseEstrella (n: number, rating: number | undefined) {
+  const r = Math.min(5, Math.max(0, Number(rating ?? 0)))
+  return { filled: r >= n, half: r >= n - 0.5 && r < n }
 }
 
 const irAInicio = () => {
@@ -669,6 +686,15 @@ onMounted(async () => {
   gap: 4px;
 }
 
+.rating-star {
+  font-size: 12px;
+  color: transparent;
+  -webkit-text-stroke: 1px #cbd5e1;
+}
+.rating-star.filled {
+  color: #f59e0b;
+  -webkit-text-stroke: 0;
+}
 .stars {
   color: #f59e0b;
   font-size: 12px;
@@ -710,9 +736,34 @@ onMounted(async () => {
   min-height: 50vh;
 }
 
-/* Mantener el estilo de las estrellas */
-.stars {
+/* Estrellas de puntuación (llenadas según valor) */
+.professional-rating .rating-star,
+.mb-2 .rating-star {
+  display: inline-block;
+  font-size: 12px;
+  color: transparent;
+  -webkit-text-stroke: 1px #cbd5e1;
+}
+.professional-rating .rating-star.filled,
+.mb-2 .rating-star.filled {
   color: #f59e0b;
+  -webkit-text-stroke: 0;
+}
+.professional-rating .rating-star.half,
+.mb-2 .rating-star.half {
+  position: relative;
+  display: inline-block;
+}
+.professional-rating .rating-star.half::before,
+.mb-2 .rating-star.half::before {
+  content: '★';
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 50%;
+  overflow: hidden;
+  color: #f59e0b;
+  -webkit-text-stroke: 0;
 }
 
 /* Mantener el estilo de los pasos */
