@@ -24,6 +24,7 @@ namespace OficiosYa.Persistence.Context
         public DbSet<ImagenTrabajo> ImagenesTrabajo { get; set; }
         public DbSet<TrabajoPublicado> TrabajosPublicados { get; set; }
         public DbSet<TrabajoCategoria> TrabajoCategorias { get; set; }
+        public DbSet<ContactoProfesional> ContactosProfesional { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -87,6 +88,23 @@ namespace OficiosYa.Persistence.Context
                       .HasForeignKey(e => e.UsuarioId)
                       .IsRequired(false)
                       .OnDelete(DeleteBehavior.Restrict);
+            });
+
+            // Configuración de ContactoProfesional (registro de clics en "Contactar" para planes por contacto)
+            modelBuilder.Entity<ContactoProfesional>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.TipoContacto).HasMaxLength(20);
+                entity.HasOne(e => e.Profesional)
+                      .WithMany(p => p.ContactosRecibidos)
+                      .HasForeignKey(e => e.ProfesionalId)
+                      .OnDelete(DeleteBehavior.Cascade);
+                entity.HasOne(e => e.Usuario)
+                      .WithMany()
+                      .HasForeignKey(e => e.UsuarioId)
+                      .IsRequired(false)
+                      .OnDelete(DeleteBehavior.SetNull);
+                entity.ToTable("ContactosProfesional", "dbo");
             });
 
             // Configuraci?n de Certificado

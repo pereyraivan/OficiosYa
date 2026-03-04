@@ -321,6 +321,7 @@
                     v-model="formulario.zonasCobertura"
                     :provincia="formulario.provincia"
                     :show-map="false"
+                    :max-zonas="1"
                   />
                 </div>
 

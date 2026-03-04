@@ -13,6 +13,7 @@ import PublicarTrabajo from '../views/PublicarTrabajo.vue'
 import EmpleosPublicados from '../views/EmpleosPublicados.vue'
 import DetalleEmpleo from '../views/DetalleEmpleo.vue'
 import PanelProfesional from '../views/PanelProfesional.vue'
+import Planes from '../views/Planes.vue'
 import DejarResena from '../views/DejarResena.vue'
 import { useAuthStore } from '../stores/auth'
 
@@ -66,6 +67,11 @@ const routes = [
     path: '/mi-panel',
     name: 'PanelProfesional',
     component: PanelProfesional
+  },
+  {
+    path: '/planes',
+    name: 'Planes',
+    component: Planes
   },
   {
     path: '/registrar',

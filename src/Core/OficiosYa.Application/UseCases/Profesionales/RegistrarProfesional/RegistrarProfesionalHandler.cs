@@ -116,18 +116,21 @@ namespace OficiosYa.Application.UseCases.Profesionales.RegistrarProfesional
             // Asociar categorías seleccionadas usando el repositorio
             await _profesionalRepository.AsociarCategoriasAsync(profesionalCreado.Id, request.Request.Oficios);
 
-            // Asociar zonas de cobertura si se proporcionaron
+            // Asociar zonas de cobertura si se proporcionaron (plan Free = 1 zona; al registrarse no tiene suscripción activa)
             if (request.Request.ZonasCobertura != null && request.Request.ZonasCobertura.Any())
             {
-                var zonas = request.Request.ZonasCobertura.Select(z => new ZonaCobertura
-                {
-                    Localidad = z.Localidad,
-                    Provincia = z.Provincia,
-                    Departamento = z.Departamento,
-                    Latitud = z.Latitud,
-                    Longitud = z.Longitud,
-                    CodigoPostal = z.CodigoPostal
-                }).ToList();
+                const int maxZonasRegistro = 1; // Sin plan activo = Free = 1 zona
+                var zonas = request.Request.ZonasCobertura
+                    .Take(maxZonasRegistro)
+                    .Select(z => new ZonaCobertura
+                    {
+                        Localidad = z.Localidad,
+                        Provincia = z.Provincia,
+                        Departamento = z.Departamento,
+                        Latitud = z.Latitud,
+                        Longitud = z.Longitud,
+                        CodigoPostal = z.CodigoPostal
+                    }).ToList();
 
                 await _profesionalRepository.AsociarZonasCoberturaAsync(profesionalCreado.Id, zonas);
             }

@@ -73,14 +73,17 @@
             </div>
           </div>
 
-          <div v-if="profesional.usuario?.email || profesional.usuario?.telefono" class="perfil-section perfil-contacto">
+          <div v-if="(profesional.usuario?.email || profesional.usuario?.telefono) || puedeRecibirContactos === false" class="perfil-section perfil-contacto">
             <h2>Contacto</h2>
-            <div class="contacto-lista">
-              <a v-if="profesional.usuario?.email" :href="`mailto:${profesional.usuario.email}`" class="contacto-item" target="_blank" rel="noopener">
+            <div v-if="puedeRecibirContactos === false" class="contacto-limitado">
+              <p class="mensaje-limitado">{{ profesional.mensajeLimiteContactos || 'Este profesional no está disponible para nuevos contactos este mes. Alcanzó el límite de su plan. Probá el próximo mes o buscá otro profesional.' }}</p>
+            </div>
+            <div v-else class="contacto-lista">
+              <a v-if="profesional.usuario?.email" href="#" class="contacto-item" @click.prevent="abrirEmail">
                 <span class="contacto-icono">✉️</span>
                 <span>{{ profesional.usuario.email }}</span>
               </a>
-              <a v-if="profesional.usuario?.telefono" :href="urlWhatsApp(profesional.usuario.telefono)" class="contacto-item" target="_blank" rel="noopener">
+              <a v-if="profesional.usuario?.telefono" href="#" class="contacto-item" @click.prevent="abrirWhatsApp">
                 <span class="contacto-icono contacto-icono-whatsapp" aria-hidden="true">
                   <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor">
                     <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.865 9.865 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
@@ -144,8 +147,11 @@
           </div>
 
           <div class="perfil-actions">
-            <button class="cta cta-contactar" @click="contactar">
+            <button v-if="puedeRecibirContactos !== false" class="cta cta-contactar" @click="contactar">
               Contactar
+            </button>
+            <button v-else class="cta cta-contactar cta-disabled" disabled>
+              No disponible (límite de contactos)
             </button>
             <button class="cta-outline" @click="irAOficiantes">Ver más profesionales</button>
           </div>
@@ -266,17 +272,30 @@ const zonasCobertura = computed(() => {
   return profesional.value?.zonasCobertura || []
 })
 
-// Ubicación sin repetir la provincia si ya está en ciudad (ej. "San Miguel de Tucumán, Capital, Tucumán")
-const textoUbicacion = computed(() => {
-  const c = profesional.value?.usuario?.ciudad?.trim() || ''
-  const p = profesional.value?.usuario?.provincia?.trim() || ''
+// Ubicación sin repetir partes (ej. "Famaillá, Famaillá, Tucumán" -> "Famaillá, Tucumán") ni provincia si ya está en ciudad
+function ubicacionSinRepetir(ciudad: string, provincia: string): string {
+  const c = ciudad?.trim() || ''
+  const p = provincia?.trim() || ''
   if (!c && !p) return ''
   if (!c) return p
   if (!p) return c
-  const cLower = c.toLowerCase()
+  // Quitar partes consecutivas repetidas en ciudad (ej. "Famaillá, Famaillá, Tucumán" -> "Famaillá, Tucumán")
+  const partes = c.split(',').map(s => s.trim()).filter(Boolean)
+  const sinRepetir: string[] = []
+  for (const parte of partes) {
+    if (sinRepetir.length === 0 || sinRepetir[sinRepetir.length - 1].toLowerCase() !== parte.toLowerCase())
+      sinRepetir.push(parte)
+  }
+  const cNorm = sinRepetir.join(', ')
+  const cLower = cNorm.toLowerCase()
   const pLower = p.toLowerCase()
-  if (cLower.endsWith(pLower) || cLower.includes(`, ${pLower}`)) return c
-  return `${c}, ${p}`
+  if (cLower.endsWith(pLower) || cLower.includes(`, ${pLower}`)) return cNorm
+  return `${cNorm}, ${p}`
+}
+const textoUbicacion = computed(() => {
+  const c = profesional.value?.usuario?.ciudad?.trim() || ''
+  const p = profesional.value?.usuario?.provincia?.trim() || ''
+  return ubicacionSinRepetir(c, p)
 })
 
 const imagenesTrabajo = computed(() => {
@@ -436,18 +455,51 @@ function urlWhatsApp (telefono: string | null | undefined): string {
   return `https://wa.me/${numero}?text=${texto}`
 }
 
-function contactar () {
+/** Registra el contacto. Devuelve true si se registró (podés abrir el enlace); false si límite alcanzado (muestra mensaje). */
+async function registrarYAbrir (tipo: 'WhatsApp' | 'Email'): Promise<boolean> {
+  const id = profesional.value?.id
+  if (!id) return true
+  try {
+    await profesionalService.registrarContacto(id, tipo)
+    return true
+  } catch (e: any) {
+    const data = e?.response?.data || e
+    if (data?.code === 'LIMITE_CONTACTOS' || data?.message?.includes('límite')) {
+      alert(data.message || 'Este profesional alcanzó el límite de contactos de su plan para este mes.')
+      return false
+    }
+    return true
+  }
+}
+
+async function contactar () {
   if (!profesional.value?.usuario) return
   const u = profesional.value.usuario
   if (u.telefono) {
-    window.open(urlWhatsApp(u.telefono), '_blank', 'noopener')
+    const ok = await registrarYAbrir('WhatsApp')
+    if (ok) window.open(urlWhatsApp(u.telefono), '_blank', 'noopener')
     return
   }
   if (u.email) {
-    window.location.href = `mailto:${u.email}`
+    const ok = await registrarYAbrir('Email')
+    if (ok) window.location.href = `mailto:${u.email}`
     return
   }
   alert('Este profesional no tiene datos de contacto publicados.')
+}
+
+async function abrirWhatsApp () {
+  const u = profesional.value?.usuario
+  if (!u?.telefono) return
+  const ok = await registrarYAbrir('WhatsApp')
+  if (ok) window.open(urlWhatsApp(u.telefono), '_blank', 'noopener')
+}
+
+async function abrirEmail () {
+  const u = profesional.value?.usuario
+  if (!u?.email) return
+  const ok = await registrarYAbrir('Email')
+  if (ok) window.location.href = `mailto:${u.email}`
 }
 
 function irAInicio () {
@@ -663,6 +715,18 @@ onMounted(cargarPerfil)
   line-height: 1.8;
 }
 
+.contacto-limitado {
+  padding: 14px 16px;
+  background: #fef3c7;
+  border-radius: 10px;
+  border: 1px solid #f59e0b;
+}
+.mensaje-limitado {
+  margin: 0;
+  color: #92400e;
+  font-size: 0.9375rem;
+  line-height: 1.5;
+}
 .contacto-lista {
   display: flex;
   flex-direction: column;
@@ -878,6 +942,11 @@ onMounted(cargarPerfil)
 }
 .cta-contactar:hover {
   filter: brightness(1.05);
+}
+.cta-contactar.cta-disabled {
+  background: #94a3b8;
+  cursor: not-allowed;
+  filter: none;
 }
 .cta-outline {
   background: transparent;

@@ -5,7 +5,7 @@
         Zonas de Cobertura
       </h4>
       <p style="font-size: 0.9rem; color: #64748b; margin: 0 0 16px 0;">
-        Seleccioná las localidades donde prestás servicios (aplica tanto para oficiantes como profesionales). Podés buscar y agregar múltiples localidades.
+        Seleccioná las localidades donde prestás servicios. {{ props.maxZonas === 1 ? 'Con el plan Free solo podés agregar una zona.' : 'Podés buscar y agregar múltiples localidades.' }}
       </p>
     </div>
 
@@ -90,12 +90,15 @@ interface Props {
   modelValue?: ZonaCobertura[]
   provincia?: string
   showMap?: boolean
+  /** Límite de zonas según plan (ej. 1 para Free, ilimitado si no se pasa). */
+  maxZonas?: number
 }
 
 const props = withDefaults(defineProps<Props>(), {
   modelValue: () => [],
   provincia: undefined,
-  showMap: true
+  showMap: true,
+  maxZonas: undefined
 })
 
 const emit = defineEmits<{
@@ -201,7 +204,14 @@ const buscarLocalidades = () => {
 
 // Agregar localidad seleccionada
 const agregarLocalidad = (ciudad: CiudadSugerida) => {
-  // Verificar si ya está agregada
+  const max = props.maxZonas
+  if (max != null && localidadesSeleccionadas.value.length >= max) {
+    alert(max === 1
+      ? 'Con el plan Free solo podés tener una zona de cobertura. Actualizá tu plan para agregar más.'
+      : `Podés agregar hasta ${max} zonas con tu plan actual.`)
+    return
+  }
+
   const yaExiste = localidadesSeleccionadas.value.some(
     l => l.localidad === ciudad.nombre && l.provincia === ciudad.provincia
   )

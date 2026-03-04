@@ -64,8 +64,8 @@
               <p class="profesional-oficio">
                 {{ profesional.oficios?.[0]?.nombre || 'Sin oficio especificado' }}
               </p>
-              <p v-if="profesional.usuario?.ciudad" class="profesional-ubicacion">
-                📍 {{ profesional.usuario.ciudad }}
+              <p v-if="profesional.usuario?.ciudad || profesional.usuario?.provincia" class="profesional-ubicacion">
+                📍 {{ textoUbicacion(profesional) }}
               </p>
               <div v-if="profesional.calificacionPromedio" class="profesional-rating">
                 <span
@@ -208,6 +208,26 @@ const mostrarResultados = computed(() => busquedaRealizada.value)
 function claseEstrella (n: number, rating: number | undefined) {
   const r = Math.min(5, Math.max(0, Number(rating ?? 0)))
   return { filled: r >= n, half: r >= n - 0.5 && r < n }
+}
+
+// Ubicación sin repetir localidad/ciudad (ej. "Famaillá, Famaillá, Tucumán" -> "Famaillá, Tucumán")
+function textoUbicacion (profesional: { usuario?: { ciudad?: string; provincia?: string } }) {
+  const c = profesional?.usuario?.ciudad?.trim() || ''
+  const p = profesional?.usuario?.provincia?.trim() || ''
+  if (!c && !p) return ''
+  if (!c) return p
+  if (!p) return c
+  const partes = c.split(',').map(s => s.trim()).filter(Boolean)
+  const sinRepetir: string[] = []
+  for (const parte of partes) {
+    if (sinRepetir.length === 0 || sinRepetir[sinRepetir.length - 1].toLowerCase() !== parte.toLowerCase())
+      sinRepetir.push(parte)
+  }
+  const cNorm = sinRepetir.join(', ')
+  const cLower = cNorm.toLowerCase()
+  const pLower = p.toLowerCase()
+  if (cLower.endsWith(pLower) || cLower.includes(`, ${pLower}`)) return cNorm
+  return `${cNorm}, ${p}`
 }
 
 // Métodos de navegación

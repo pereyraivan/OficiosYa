@@ -345,15 +345,17 @@ function cerrarSesion () {
     top: 0;
     right: -100%;
     width: 100%;
+    max-width: 320px;
     height: 100vh;
-    background: var(--bg);
+    background: linear-gradient(180deg, #f0fdf4 0%, #ecfdf5 50%, #f0f9ff 100%);
     flex-direction: column;
     justify-content: center;
     align-items: center;
     gap: 32px;
     transition: right 0.3s ease;
     z-index: 1000;
-    box-shadow: -4px 0 20px rgba(0, 0, 0, 0.1);
+    box-shadow: -4px 0 20px rgba(0, 0, 0, 0.12);
+    padding: 80px 24px 40px;
   }
 
   .navlinks.active {
@@ -364,6 +366,15 @@ function cerrarSesion () {
   .nav-dropdown-trigger {
     font-size: 1.2rem;
     font-weight: 600;
+    color: #0f172a;
+  }
+
+  .navlinks .nav-dropdown .nav-link {
+    color: #0f172a;
+  }
+
+  .navlinks .cta-outline {
+    color: #475569;
   }
 
   .nav-dropdown-menu {

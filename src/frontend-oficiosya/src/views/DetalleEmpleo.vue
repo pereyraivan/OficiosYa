@@ -17,9 +17,19 @@
         </section>
 
         <div class="detalle-actions">
-          <button type="button" class="btn-postularme" @click="abrirPostulacion">
-            Postularme
-          </button>
+          <template v-if="puedePostularEmpleos === true">
+            <button type="button" class="btn-postularme" @click="abrirPostulacion">
+              Postularme
+            </button>
+          </template>
+          <template v-else-if="authStore.estaAutenticado && puedePostularEmpleos === false">
+            <p class="mensaje-plan">Para postularte a empleos necesitás plan <strong>Premium</strong>.</p>
+            <router-link to="/planes" class="btn-postularme btn-planes">Ver planes Premium</router-link>
+          </template>
+          <template v-else-if="!authStore.estaAutenticado">
+            <p class="mensaje-plan">Iniciá sesión como profesional u oficiante para postularte.</p>
+            <router-link to="/login" class="btn-postularme btn-planes">Iniciar sesión</router-link>
+          </template>
           <button type="button" class="btn-volver" @click="irAEmpleos">Volver a empleos</button>
         </div>
       </div>
@@ -68,17 +78,22 @@
 <script setup lang="ts">
 import { ref, reactive, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import { useAuthStore } from '../stores/auth'
 import { trabajosService } from '../services/trabajosService'
+import { profesionalService } from '../services/profesionalService'
 import type { TrabajoDetalle } from '../services/trabajosService'
 
 const route = useRoute()
 const router = useRouter()
+const authStore = useAuthStore()
 
 const trabajo = ref<TrabajoDetalle | null>(null)
 const cargando = ref(true)
 const error = ref('')
 const mostrarModal = ref(false)
 const postulacion = reactive({ descripcion: '', monto: '' })
+/** true = puede postular (Premium), false = no (Free/Básica), null = no cargado o no es profesional */
+const puedePostularEmpleos = ref<boolean | null>(null)
 
 const INTRO_OFICIOSYA = 'Te contacto desde la página OficiosYa, me postulo al trabajo que publicaste.'
 
@@ -186,6 +201,17 @@ async function cargar () {
   } finally {
     cargando.value = false
   }
+  // Si está logueado, verificar si puede postularse (solo plan Premium)
+  if (authStore.estaAutenticado) {
+    try {
+      const r = await profesionalService.yoPuedoPostularEmpleos()
+      puedePostularEmpleos.value = r.puedePostularEmpleos
+    } catch {
+      puedePostularEmpleos.value = false
+    }
+  } else {
+    puedePostularEmpleos.value = false
+  }
 }
 
 function irAHome () { router.push('/') }
@@ -228,8 +254,9 @@ onMounted(cargar)
 .detalle-section { margin-bottom: 24px; }
 .detalle-section h2 { font-size: 1rem; font-weight: 600; color: #0f172a; margin: 0 0 8px 0; }
 .detalle-descripcion { font-size: 0.9375rem; color: #475569; line-height: 1.6; margin: 0; white-space: pre-wrap; }
-.detalle-actions { display: flex; gap: 12px; margin-top: 32px; flex-wrap: wrap; }
-.btn-postularme {
+.detalle-actions { display: flex; gap: 12px; margin-top: 32px; flex-wrap: wrap; align-items: center; }
+.mensaje-plan { margin: 0; font-size: 0.9375rem; color: #64748b; }
+.btn-postularme, .btn-planes {
   padding: 12px 24px;
   background: #22c55e;
   color: white;
@@ -237,8 +264,10 @@ onMounted(cargar)
   border-radius: 8px;
   font-weight: 600;
   cursor: pointer;
+  text-decoration: none;
+  display: inline-block;
 }
-.btn-postularme:hover { filter: brightness(1.05); }
+.btn-postularme:hover, .btn-planes:hover { filter: brightness(1.05); }
 .btn-volver {
   padding: 12px 24px;
   background: white;

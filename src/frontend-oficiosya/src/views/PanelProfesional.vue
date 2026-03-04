@@ -104,18 +104,23 @@
             <section v-show="tabActivo === 'suscripcion'" class="tab-content">
               <h2 class="tab-titulo">Tu suscripción</h2>
               <div v-if="suscripcionActiva" class="suscripcion-card activa">
-                <div class="suscripcion-tipo">{{ suscripcionActiva.tipo }}</div>
+                <div class="suscripcion-tipo">Plan {{ suscripcionActiva.tipo }}</div>
                 <div class="suscripcion-detalle">
                   <p><strong>Estado:</strong> {{ suscripcionActiva.estado }}</p>
                   <p><strong>Vencimiento:</strong> {{ formatearFecha(suscripcionActiva.fechaVencimiento) }}</p>
+                  <p v-if="limiteContactosMensual < 99999"><strong>Contactos este mes:</strong> {{ contactosUsadosEsteMes }} / {{ limiteContactosMensual }}</p>
+                  <p v-else><strong>Contactos:</strong> Ilimitados</p>
+                  <p v-if="accesoEmpleos"><strong>Empleos:</strong> Podés postularte a trabajos publicados</p>
+                  <p v-else class="hint">Para postularte a empleos necesitás plan Premium.</p>
                 </div>
               </div>
               <div v-else class="suscripcion-card inactiva">
-                <p>No tenés una suscripción activa.</p>
-                <p class="small">Para aparecer en las búsquedas y recibir postulaciones, elegí un plan. El flujo de pago estará disponible pronto.</p>
+                <p><strong>Plan actual: Free</strong></p>
+                <p>Contactos este mes: {{ contactosUsadosEsteMes }} / {{ limiteContactosMensual }}</p>
+                <p class="small">Para más contactos y poder postularte a empleos, elegí un plan de pago.</p>
               </div>
               <div class="planes-link">
-                <button type="button" class="btn-cta-outline" disabled>Ver planes (próximamente)</button>
+                <router-link to="/planes" class="btn-cta-outline">Ver planes y precios</router-link>
               </div>
             </section>
 
@@ -126,6 +131,7 @@
               <MapaZonasCobertura
                 v-model="formZonas"
                 :show-map="false"
+                :max-zonas="maxZonasCobertura"
               />
               <button type="button" class="btn-cta" :disabled="guardandoZonas" @click="guardarZonas">
                 {{ guardandoZonas ? 'Guardando...' : 'Guardar zonas' }}
@@ -193,6 +199,10 @@ const categoriasDisponibles = ref<Array<{ id: number; nombre: string; tipo?: str
 const cargandoCategorias = ref(false)
 
 const suscripcionActiva = computed(() => miPerfil.value && (miPerfil.value as any).suscripcionActiva ? (miPerfil.value as any).suscripcionActiva : null)
+const limiteContactosMensual = computed(() => (miPerfil.value as any)?.limiteContactosMensual ?? 2)
+const contactosUsadosEsteMes = computed(() => (miPerfil.value as any)?.contactosUsadosEsteMes ?? 0)
+const accesoEmpleos = computed(() => (miPerfil.value as any)?.accesoEmpleos === true)
+const maxZonasCobertura = computed(() => (miPerfil.value as any)?.maxZonasCobertura ?? 99999)
 
 const linkDejarResena = computed(() => {
   const id = miPerfil.value?.id

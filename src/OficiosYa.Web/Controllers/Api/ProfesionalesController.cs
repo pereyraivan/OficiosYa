@@ -163,8 +163,22 @@ namespace OficiosYa.Web.Controllers.Api
                 return NotFound(new { message = "No tenés un perfil de profesional asociado a esta cuenta." });
             }
 
+            // Marcar suscripciones vencidas (Estado Activa pero FechaVencimiento ya pasó) para mantener consistencia
+            var vencidas = profesional.Suscripciones.Where(s => s.Estado == "Activa" && s.FechaVencimiento <= DateTime.UtcNow).ToList();
+            foreach (var s in vencidas)
+                s.MarcarComoVencida();
+            if (vencidas.Count > 0)
+                await _context.SaveChangesAsync();
+
             var suscripcionActiva = profesional.Suscripciones
                 .FirstOrDefault(s => s.Estado == "Activa" && s.FechaVencimiento > DateTime.UtcNow);
+            var planActual = suscripcionActiva?.TipoSuscripcion ?? "Free";
+            var limiteContactos = PlanLimitsHelper.GetLimiteContactosMensuales(planActual);
+            var inicioMes = new DateTime(DateTime.UtcNow.Year, DateTime.UtcNow.Month, 1, 0, 0, 0, DateTimeKind.Utc);
+            var finMes = inicioMes.AddMonths(1);
+            var contactosUsadosEsteMes = await _context.ContactosProfesional
+                .CountAsync(c => c.ProfesionalId == profesional.Id && c.FechaHora >= inicioMes && c.FechaHora < finMes);
+            var accesoEmpleos = PlanLimitsHelper.TieneAccesoEmpleos(planActual);
 
             var u = profesional.Usuario;
             return Ok(new
@@ -217,7 +231,12 @@ namespace OficiosYa.Web.Controllers.Api
                         tipo = suscripcionActiva.TipoSuscripcion,
                         fechaVencimiento = suscripcionActiva.FechaVencimiento.ToString("yyyy-MM-dd"),
                         estado = suscripcionActiva.Estado
-                    } : null
+                    } : null,
+                    planActual,
+                    limiteContactosMensual = limiteContactos,
+                    contactosUsadosEsteMes,
+                    accesoEmpleos,
+                    maxZonasCobertura = PlanLimitsHelper.GetMaxZonasCobertura(planActual)
                 }
             });
         }
@@ -227,6 +246,7 @@ namespace OficiosYa.Web.Controllers.Api
         {
             var profesional = await _context.Profesionales
                 .Include(p => p.Usuario)
+                .Include(p => p.Suscripciones)
                 .Include(p => p.ProfesionalCategorias)
                     .ThenInclude(pc => pc.CategoriaServicio)
                 .Include(p => p.ZonasCobertura)
@@ -237,6 +257,15 @@ namespace OficiosYa.Web.Controllers.Api
             {
                 return NotFound(new { message = "Profesional no encontrado" });
             }
+
+            var planActual = ObtenerPlanActualDelProfesional(profesional);
+            var limite = PlanLimitsHelper.GetLimiteContactosMensuales(planActual);
+            var inicioMes = new DateTime(DateTime.UtcNow.Year, DateTime.UtcNow.Month, 1, 0, 0, 0, DateTimeKind.Utc);
+            var finMes = inicioMes.AddMonths(1);
+            var contactosEsteMes = await _context.ContactosProfesional
+                .CountAsync(c => c.ProfesionalId == id && c.FechaHora >= inicioMes && c.FechaHora < finMes);
+            var puedeRecibirContactos = contactosEsteMes < limite;
+            var mensajeLimiteContactos = puedeRecibirContactos ? null : "Este profesional alcanzó el límite de contactos de su plan este mes. No está disponible para nuevos contactos hasta el próximo mes.";
 
             var u = profesional.Usuario;
             return Ok(new
@@ -253,12 +282,14 @@ namespace OficiosYa.Web.Controllers.Api
                     disponible = profesional.Disponible,
                     fechaRegistro = profesional.FechaRegistro.ToString("yyyy-MM-ddTHH:mm:ss.fffZ"),
                     activo = profesional.Activo,
+                    puedeRecibirContactos,
+                    mensajeLimiteContactos,
                     usuario = u != null ? new
                     {
                         id = u.Id,
                         nombre = (u.Nombre ?? "") + " " + (u.Apellido ?? "").Trim(),
-                        email = u.Email ?? "",
-                        telefono = u.Telefono,
+                        email = puedeRecibirContactos ? (u.Email ?? "") : null,
+                        telefono = puedeRecibirContactos ? u.Telefono : null,
                         ciudad = u.Ciudad,
                         provincia = u.Provincia
                     } : null,
@@ -402,11 +433,27 @@ namespace OficiosYa.Web.Controllers.Api
             var profesional = await _context.Profesionales
                 .Include(p => p.ProfesionalCategorias)
                 .Include(p => p.ZonasCobertura)
+                .Include(p => p.Suscripciones)
                 .FirstOrDefaultAsync(p => p.UsuarioId == userId);
 
             if (profesional == null)
             {
                 return NotFound(new { message = "No tenés un perfil de profesional asociado a esta cuenta." });
+            }
+
+            if (request.ZonasCobertura != null)
+            {
+                var planActual = ObtenerPlanActualDelProfesional(profesional);
+                var maxZonas = PlanLimitsHelper.GetMaxZonasCobertura(planActual);
+                if (request.ZonasCobertura.Count > maxZonas)
+                {
+                    return BadRequest(new
+                    {
+                        message = maxZonas == 1
+                            ? "Con el plan Free solo podés tener una zona de cobertura. Actualizá tu plan para agregar más."
+                            : $"Superás el límite de zonas permitidas para tu plan ({request.ZonasCobertura.Count} zonas)."
+                    });
+                }
             }
 
             if (_moderation.IsEnabled)
@@ -533,6 +580,33 @@ namespace OficiosYa.Web.Controllers.Api
                     stackTrace = _environment.IsDevelopment() ? ex.StackTrace : null
                 });
             }
+        }
+
+        /// <summary>
+        /// Indica si el profesional autenticado puede postularse a empleos (solo plan Premium).
+        /// Si no está autenticado o no es profesional, puede = false.
+        /// </summary>
+        [HttpGet("yo-puedo-postular-empleos")]
+        [Authorize]
+        public async Task<IActionResult> YoPuedoPostularEmpleos()
+        {
+            var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier) ?? User.FindFirstValue("sub");
+            if (string.IsNullOrEmpty(userIdClaim) || !int.TryParse(userIdClaim, out var userId))
+            {
+                return Ok(new { puedePostularEmpleos = false, planActual = "Free", message = "No autenticado" });
+            }
+
+            var profesional = await _context.Profesionales
+                .Include(p => p.Suscripciones)
+                .FirstOrDefaultAsync(p => p.UsuarioId == userId);
+            if (profesional == null)
+            {
+                return Ok(new { puedePostularEmpleos = false, planActual = "Free", message = "No tenés perfil de profesional" });
+            }
+
+            var planActual = ObtenerPlanActualDelProfesional(profesional);
+            var puede = PlanLimitsHelper.TieneAccesoEmpleos(planActual);
+            return Ok(new { puedePostularEmpleos = puede, planActual });
         }
 
         [HttpGet("categorias")]
@@ -779,6 +853,137 @@ namespace OficiosYa.Web.Controllers.Api
                     stackTrace = _environment.IsDevelopment() ? ex.StackTrace : null
                 });
             }
+        }
+
+        /// <summary>
+        /// Obtiene los perfiles agregados más recientemente (por FechaRegistro), para mostrar en "Perfiles agregados recientemente".
+        /// </summary>
+        [HttpGet("recientes")]
+        public async Task<IActionResult> ObtenerRecientes([FromQuery] int limite = 9)
+        {
+            try
+            {
+                var take = Math.Clamp(limite, 1, 50);
+                var profesionales = await _context.Profesionales
+                    .Include(p => p.Usuario)
+                    .Include(p => p.ProfesionalCategorias)
+                        .ThenInclude(pc => pc.CategoriaServicio)
+                    .Where(p => p.Activo && p.Disponible && p.Usuario != null)
+                    .OrderByDescending(p => p.FechaRegistro)
+                    .Take(take)
+                    .ToListAsync();
+
+                var resultado = profesionales
+                    .Select(p => new
+                    {
+                        id = p.Id,
+                        usuarioId = p.UsuarioId,
+                        descripcion = p.Descripcion ?? string.Empty,
+                        fotoPerfil = p.FotoPerfil,
+                        calificacionPromedio = p.CalificacionPromedio,
+                        totalResenas = p.TotalResenas,
+                        disponible = p.Disponible,
+                        fechaRegistro = p.FechaRegistro.ToString("yyyy-MM-ddTHH:mm:ss.fffZ"),
+                        activo = p.Activo,
+                        usuario = p.Usuario != null ? new
+                        {
+                            id = p.Usuario.Id,
+                            nombre = p.Usuario.Nombre ?? string.Empty,
+                            apellido = p.Usuario.Apellido ?? string.Empty,
+                            email = p.Usuario.Email ?? string.Empty,
+                            ciudad = p.Usuario.Ciudad,
+                            provincia = p.Usuario.Provincia,
+                            fechaRegistro = p.Usuario.FechaRegistro.ToString("yyyy-MM-ddTHH:mm:ss.fffZ"),
+                            activo = p.Usuario.Activo
+                        } : null,
+                        oficios = p.ProfesionalCategorias
+                            .Where(pc => pc.Activo && pc.CategoriaServicio != null)
+                            .Select(pc => new { nombre = pc.CategoriaServicio!.Nombre ?? string.Empty })
+                            .ToList()
+                    })
+                    .ToList();
+
+                return Ok(new { success = true, data = resultado });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { success = false, message = "Error al obtener perfiles recientes", error = ex.Message });
+            }
+        }
+
+        /// <summary>
+        /// Registra un contacto (clic en "Contactar") hacia el profesional. Usado para conteo y planes por contacto.
+        /// No requiere autenticación. Respeta límites del plan (Free: 2/mes, Básica: 15/mes, Premium: ilimitado).
+        /// </summary>
+        [HttpPost("{id}/registrar-contacto")]
+        public async Task<IActionResult> RegistrarContacto(int id, [FromBody] RegistrarContactoRequest? request = null)
+        {
+            var profesional = await _context.Profesionales
+                .Include(p => p.Suscripciones)
+                .FirstOrDefaultAsync(p => p.Id == id);
+            if (profesional == null)
+                return NotFound(new { message = "Profesional no encontrado" });
+
+            var planActual = ObtenerPlanActualDelProfesional(profesional);
+            var limite = PlanLimitsHelper.GetLimiteContactosMensuales(planActual);
+            var inicioMes = new DateTime(DateTime.UtcNow.Year, DateTime.UtcNow.Month, 1, 0, 0, 0, DateTimeKind.Utc);
+            var finMes = inicioMes.AddMonths(1);
+            var contactosEsteMes = await _context.ContactosProfesional
+                .CountAsync(c => c.ProfesionalId == id && c.FechaHora >= inicioMes && c.FechaHora < finMes);
+            if (contactosEsteMes >= limite)
+            {
+                return StatusCode(403, new
+                {
+                    message = "Este profesional alcanzó el límite de contactos de su plan para este mes. Podés intentar más adelante o que actualice su plan.",
+                    code = "LIMITE_CONTACTOS",
+                    limite,
+                    usados = contactosEsteMes
+                });
+            }
+
+            int? usuarioId = null;
+            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier) ?? User.FindFirst("sub");
+            if (userIdClaim != null && int.TryParse(userIdClaim.Value, out var uid))
+                usuarioId = uid;
+
+            var tipo = request?.TipoContacto?.Trim();
+            if (!string.IsNullOrEmpty(tipo) && tipo.Length > 20)
+                tipo = tipo.Substring(0, 20);
+
+            _context.ContactosProfesional.Add(new ContactoProfesional
+            {
+                ProfesionalId = id,
+                UsuarioId = usuarioId,
+                TipoContacto = tipo ?? "WhatsApp",
+                FechaHora = DateTime.UtcNow
+            });
+            await _context.SaveChangesAsync();
+
+            return Ok(new { success = true, message = "Contacto registrado" });
+        }
+
+        /// <summary>
+        /// Devuelve la cantidad de contactos recibidos por el profesional en un período (para planes y panel).
+        /// </summary>
+        [HttpGet("{id}/contactos/cantidad")]
+        public async Task<IActionResult> ObtenerCantidadContactos(int id,
+            [FromQuery] DateTime? desde = null,
+            [FromQuery] DateTime? hasta = null)
+        {
+            var profesional = await _context.Profesionales.FindAsync(id);
+            if (profesional == null)
+                return NotFound(new { message = "Profesional no encontrado" });
+
+            var query = _context.ContactosProfesional.Where(c => c.ProfesionalId == id);
+            if (desde.HasValue)
+                query = query.Where(c => c.FechaHora >= desde.Value);
+            if (hasta.HasValue)
+            {
+                var fin = hasta.Value.Date.AddDays(1);
+                query = query.Where(c => c.FechaHora < fin);
+            }
+            var total = await query.CountAsync();
+            return Ok(new { success = true, total });
         }
 
         [HttpGet("buscar")]
@@ -1064,6 +1269,13 @@ namespace OficiosYa.Web.Controllers.Api
             }
 
             await _context.SaveChangesAsync();
+        }
+
+        /// <summary>Obtiene el nombre del plan actual (suscripción activa y no vencida) o "Free".</summary>
+        private static string ObtenerPlanActualDelProfesional(Profesional p)
+        {
+            var activa = p.Suscripciones?.FirstOrDefault(s => s.Estado == "Activa" && s.FechaVencimiento > DateTime.UtcNow);
+            return activa?.TipoSuscripcion ?? "Free";
         }
     }
 

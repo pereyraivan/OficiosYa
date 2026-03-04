@@ -109,6 +109,38 @@ export const profesionalService = {
     }
   },
 
+  /** Perfiles agregados recientemente (por fecha de registro). */
+  async obtenerRecientes(limite: number = 12): Promise<Profesional[]> {
+    try {
+      const response = await api.get<ApiResponse<Profesional[]>>('/profesionales/recientes', { params: { limite } })
+      if (response.data && typeof response.data === 'object' && 'data' in response.data) {
+        return response.data.data || []
+      }
+      return Array.isArray(response.data) ? response.data : []
+    } catch (error: any) {
+      return []
+    }
+  },
+
+  /** Registra un contacto (clic en Contactar) para conteo y planes. Opcional: tipoContacto 'WhatsApp' | 'Email'. */
+  async registrarContacto(profesionalId: number, tipoContacto?: 'WhatsApp' | 'Email'): Promise<void> {
+    await api.post(`/profesionales/${profesionalId}/registrar-contacto`, {
+      tipoContacto: tipoContacto ?? 'WhatsApp'
+    })
+  },
+
+  /** Cantidad de contactos recibidos por el profesional en un período (para panel o planes). */
+  async obtenerCantidadContactos(profesionalId: number, desde?: string, hasta?: string): Promise<{ total: number }> {
+    const params: Record<string, string> = {}
+    if (desde) params.desde = desde
+    if (hasta) params.hasta = hasta
+    const response = await api.get<{ success: boolean; total: number }>(
+      `/profesionales/${profesionalId}/contactos/cantidad`,
+      { params }
+    )
+    return { total: response.data?.total ?? 0 }
+  },
+
   // Obtener profesional por ID (acepta respuesta con { data } o el objeto directo)
   async obtenerPorId(id: number): Promise<Profesional> {
     const response = await api.get(`/profesionales/${id}`)
@@ -142,6 +174,12 @@ export const profesionalService = {
     } catch (error: any) {
       return []
     }
+  },
+
+  /** Indica si el profesional autenticado puede postularse a empleos (solo Premium). */
+  async yoPuedoPostularEmpleos(): Promise<{ puedePostularEmpleos: boolean; planActual: string }> {
+    const response = await api.get<{ puedePostularEmpleos: boolean; planActual: string }>('/profesionales/yo-puedo-postular-empleos')
+    return response.data ?? { puedePostularEmpleos: false, planActual: 'Free' }
   },
 
   /** Perfil del profesional autenticado (para el panel). Requiere token. */

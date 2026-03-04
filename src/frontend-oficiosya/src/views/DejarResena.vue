@@ -108,7 +108,7 @@
               <div class="resultado-info">
                 <h3>{{ p.usuario?.nombre || 'Sin nombre' }} {{ p.usuario?.apellido || '' }}</h3>
                 <p class="resultado-oficio">{{ p.oficios?.[0]?.nombre || '—' }}</p>
-                <p v-if="p.usuario?.ciudad" class="resultado-ubicacion">📍 {{ p.usuario.ciudad }}</p>
+                <p v-if="p.usuario?.ciudad || p.usuario?.provincia" class="resultado-ubicacion">📍 {{ textoUbicacion(p) }}</p>
               </div>
               <router-link :to="`/dejar-resena/${p.id}`" class="btn-dejar-resena">Dejar reseña</router-link>
             </div>
@@ -153,6 +153,24 @@ const terminoBusqueda = ref('')
 const resultados = ref<Profesional[]>([])
 const buscando = ref(false)
 const busquedaRealizada = ref(false)
+
+// Ubicación sin repetir (ej. "Famaillá, Famaillá, Tucumán" -> "Famaillá, Tucumán")
+function textoUbicacion (p: { usuario?: { ciudad?: string; provincia?: string } }) {
+  const c = p?.usuario?.ciudad?.trim() || ''
+  const prov = p?.usuario?.provincia?.trim() || ''
+  if (!c && !prov) return ''
+  if (!c) return prov
+  if (!prov) return c
+  const partes = c.split(',').map(s => s.trim()).filter(Boolean)
+  const sinRepetir: string[] = []
+  for (const parte of partes) {
+    if (sinRepetir.length === 0 || sinRepetir[sinRepetir.length - 1].toLowerCase() !== parte.toLowerCase())
+      sinRepetir.push(parte)
+  }
+  const cNorm = sinRepetir.join(', ')
+  if (cNorm.toLowerCase().endsWith(prov.toLowerCase()) || cNorm.toLowerCase().includes(`, ${prov.toLowerCase()}`)) return cNorm
+  return `${cNorm}, ${prov}`
+}
 
 const nombreProfesional = computed(() => {
   const p = profesional.value

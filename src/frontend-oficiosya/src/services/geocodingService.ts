@@ -58,7 +58,9 @@ export const geocodingService = {
           const provinciaNombre = item.provincia?.nombre || ''
           const departamento = item.departamento?.nombre
           
-          const nombreCompleto = departamento 
+          // Evitar repetir localidad si el departamento tiene el mismo nombre (ej. Famaillá, Famaillá -> Famaillá)
+          const mismoNombre = departamento && departamento.trim().toLowerCase() === nombre.trim().toLowerCase()
+          const nombreCompleto = departamento && !mismoNombre
             ? `${nombre}, ${departamento}, ${provinciaNombre}`
             : `${nombre}, ${provinciaNombre}`
 

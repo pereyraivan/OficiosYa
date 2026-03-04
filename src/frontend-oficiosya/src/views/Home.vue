@@ -33,35 +33,52 @@
                 </button>
               </div>
             </form>
-            
-            <div class="search-tip">
-              <strong>Tip:</strong> pronto podrás <b>dibujar tu zona</b> en el mapa para resultados más precisos.
-            </div>
           </div>
           <div class="col-lg-6">
-            <div class="hero-card">
-              <span class="verified-badge">Nuevos perfiles verificados</span>
-              <h3 class="professionals-title">Profesionales cerca tuyo</h3>
-              <div class="professionals-grid">
-                <div v-for="profesional in profesionalesDestacados" :key="profesional.id" class="professional-card" @click="verPerfil(profesional.id)">
-                  <div class="professional-avatar"></div>
-                  <div class="professional-info">
-                    <div class="professional-name">{{ profesional.usuario?.nombre }}</div>
-                    <div class="professional-details">{{ profesional.oficios?.[0]?.nombre || 'Electricista' }}</div>
-                    <div class="professional-rating">
-                      <span
-                        v-for="n in 5"
-                        :key="n"
-                        class="rating-star"
-                        :class="claseEstrella(n, profesional.calificacionPromedio)"
-                        aria-hidden="true"
-                      >★</span>
-                      <span class="rating-text">({{ profesional.totalResenas ?? 0 }} reseñas)</span>
+            <div class="hero-card mobile-accordion-wrap">
+              <span class="verified-badge">Perfiles destacados</span>
+              <button type="button" class="mobile-accordion-btn mobile-only" @click="accordionCerca = !accordionCerca" aria-expanded="accordionCerca">
+                <span>Perfiles destacados</span>
+                <span class="accordion-chevron" :class="{ open: accordionCerca }">▼</span>
+              </button>
+              <div class="mobile-accordion-content" :class="{ collapsed: !accordionCerca }">
+                <div class="hero-tabs">
+                  <button type="button" class="hero-tab" :class="{ active: tabDestacados === 'profesionales' }" @click="tabDestacados = 'profesionales'">Profesionales</button>
+                  <button type="button" class="hero-tab" :class="{ active: tabDestacados === 'oficiantes' }" @click="tabDestacados = 'oficiantes'">Oficiantes</button>
+                </div>
+                <div class="professionals-grid">
+                  <template v-if="tabDestacados === 'profesionales'">
+                    <div v-for="profesional in profesionalesDestacados" :key="'p-' + profesional.id" class="professional-card" @click="verPerfil(profesional.id)">
+                      <div class="professional-avatar"></div>
+                      <div class="professional-info">
+                        <div class="professional-name">{{ profesional.usuario?.nombre }}</div>
+                        <div class="professional-details">{{ profesional.oficios?.[0]?.nombre || '—' }}</div>
+                        <div class="professional-rating">
+                          <span v-for="n in 5" :key="n" class="rating-star" :class="claseEstrella(n, profesional.calificacionPromedio)" aria-hidden="true">★</span>
+                          <span class="rating-text">({{ profesional.totalResenas ?? 0 }} reseñas)</span>
+                        </div>
+                        <p v-if="profesional.resenas?.length && profesional.resenas[0].comentario" class="professional-resena-preview">
+                          «{{ (profesional.resenas[0].comentario || '').slice(0, 60) }}{{ (profesional.resenas[0].comentario || '').length > 60 ? '…' : '' }}» — {{ profesional.resenas[0].nombreAutor || 'Cliente' }}
+                        </p>
+                      </div>
                     </div>
-                    <p v-if="profesional.resenas?.length && profesional.resenas[0].comentario" class="professional-resena-preview">
-                      «{{ (profesional.resenas[0].comentario || '').slice(0, 60) }}{{ (profesional.resenas[0].comentario || '').length > 60 ? '…' : '' }}» — {{ profesional.resenas[0].nombreAutor || 'Cliente' }}
-                    </p>
-                  </div>
+                  </template>
+                  <template v-else>
+                    <div v-for="profesional in oficiantesDestacados" :key="'o-' + profesional.id" class="professional-card" @click="verPerfil(profesional.id)">
+                      <div class="professional-avatar"></div>
+                      <div class="professional-info">
+                        <div class="professional-name">{{ profesional.usuario?.nombre }}</div>
+                        <div class="professional-details">{{ profesional.oficios?.[0]?.nombre || '—' }}</div>
+                        <div class="professional-rating">
+                          <span v-for="n in 5" :key="n" class="rating-star" :class="claseEstrella(n, profesional.calificacionPromedio)" aria-hidden="true">★</span>
+                          <span class="rating-text">({{ profesional.totalResenas ?? 0 }} reseñas)</span>
+                        </div>
+                        <p v-if="profesional.resenas?.length && profesional.resenas[0].comentario" class="professional-resena-preview">
+                          «{{ (profesional.resenas[0].comentario || '').slice(0, 60) }}{{ (profesional.resenas[0].comentario || '').length > 60 ? '…' : '' }}» — {{ profesional.resenas[0].nombreAutor || 'Cliente' }}
+                        </p>
+                      </div>
+                    </div>
+                  </template>
                 </div>
               </div>
             </div>
@@ -71,17 +88,23 @@
     </section>
 
     <!-- Categorías -->
-    <section class="section py-5 bg-light" id="categorias">
+    <section class="section py-5 bg-light mobile-accordion-wrap" id="categorias">
       <div class="container">
-        <h2 class="text-center mb-3">Explorá categorías populares</h2>
-        <p class="text-center text-muted mb-5">Elegí una categoría para ver profesionales cerca de tu ubicación.</p>
-        <div class="row g-4">
-          <div class="col-lg-3 col-md-4 col-sm-6" v-for="categoria in categorias" :key="categoria.nombre">
-            <div class="card cat h-100 text-center">
-              <div class="card-body d-flex flex-column align-items-center">
-                <div class="cat-icon mb-3">{{ categoria.icono }}</div>
-                <h5 class="card-title">{{ categoria.nombre }}</h5>
-                <p class="card-text text-muted">{{ categoria.descripcion }}</p>
+        <h2 class="text-center mb-3 desktop-only">Explorá categorías populares</h2>
+        <p class="text-center text-muted mb-5 desktop-only">Elegí una categoría para ver profesionales cerca de tu ubicación.</p>
+        <button type="button" class="mobile-accordion-btn mobile-only" @click="accordionCategorias = !accordionCategorias" aria-expanded="accordionCategorias">
+          <span>Explorá categorías populares</span>
+          <span class="accordion-chevron" :class="{ open: accordionCategorias }">▼</span>
+        </button>
+        <div class="mobile-accordion-content" :class="{ collapsed: !accordionCategorias }">
+          <div class="row g-4">
+            <div class="col-lg-3 col-md-4 col-sm-6" v-for="categoria in categorias" :key="categoria.nombre">
+              <div class="card cat h-100 text-center">
+                <div class="card-body d-flex flex-column align-items-center">
+                  <div class="cat-icon mb-3">{{ categoria.icono }}</div>
+                  <h5 class="card-title">{{ categoria.nombre }}</h5>
+                  <p class="card-text text-muted">{{ categoria.descripcion }}</p>
+                </div>
               </div>
             </div>
           </div>
@@ -105,37 +128,27 @@
       </div>
     </section>
 
-    <!-- Profesionales destacados -->
-    <section class="section py-5">
+    <!-- Perfiles agregados recientemente -->
+    <section class="section py-5 mobile-accordion-wrap section-recientes">
       <div class="container">
-        <h2 class="text-center mb-3">Profesionales destacados</h2>
-        <p class="text-center text-muted mb-5">Perfiles completos, con certificaciones y excelentes reseñas.</p>
-        <div class="row g-4">
-          <div class="col-lg-4 col-md-6" v-for="profesional in profesionalesDestacados" :key="profesional.id" @click="verPerfil(profesional.id)" style="cursor: pointer;">
-            <div class="pro card h-100">
-              <div class="card-body">
-                <div class="pro-head d-flex align-items-center mb-3">
-                  <div class="avatar me-3"></div>
-                  <div>
-                    <h6 class="card-title mb-1">{{ profesional.usuario?.nombre }}</h6>
-                    <small class="text-muted">San Miguel de Tucumán · Tucumán</small>
+        <h2 class="text-center mb-3 desktop-only">Perfiles agregados recientemente</h2>
+        <p class="text-center text-muted mb-4 desktop-only">Los últimos perfiles que se sumaron a OficiosYa.</p>
+        <button type="button" class="mobile-accordion-btn mobile-only" @click="accordionDestacados = !accordionDestacados" aria-expanded="accordionDestacados">
+          <span>Perfiles agregados recientemente</span>
+          <span class="accordion-chevron" :class="{ open: accordionDestacados }">▼</span>
+        </button>
+        <div class="mobile-accordion-content" :class="{ collapsed: !accordionDestacados }">
+          <div class="recientes-grid">
+            <div v-for="profesional in perfilesRecientes" :key="profesional.id" class="card card-reciente" @click="verPerfil(profesional.id)">
+              <div class="card-reciente-body">
+                <div class="card-reciente-avatar">{{ (profesional.usuario?.nombre || 'P').charAt(0) }}</div>
+                <div class="card-reciente-info">
+                  <h6 class="card-reciente-nombre">{{ profesional.usuario?.nombre }} {{ profesional.usuario?.apellido || '' }}</h6>
+                  <p class="card-reciente-oficio">{{ profesional.oficios?.[0]?.nombre || '—' }}</p>
+                  <div class="card-reciente-rating">
+                    <span v-for="n in 5" :key="n" class="rating-star small" :class="claseEstrella(n, profesional.calificacionPromedio)" aria-hidden="true">★</span>
+                    <span class="card-reciente-resenas">({{ profesional.totalResenas ?? 0 }})</span>
                   </div>
-                </div>
-                <div class="mb-2 d-flex align-items-center gap-1">
-                  <span
-                    v-for="n in 5"
-                    :key="n"
-                    class="rating-star"
-                    :class="claseEstrella(n, profesional.calificacionPromedio)"
-                    aria-hidden="true"
-                  >★</span>
-                  <span class="ms-1">{{ (profesional.calificacionPromedio ?? 0).toFixed(1) }} ({{ profesional.totalResenas ?? 0 }} reseñas)</span>
-                </div>
-                <p v-if="profesional.resenas?.length && profesional.resenas[0].comentario" class="pro-resena-real small text-muted mb-2">
-                  «{{ (profesional.resenas[0].comentario || '').slice(0, 80) }}{{ (profesional.resenas[0].comentario || '').length > 80 ? '…' : '' }}» — {{ profesional.resenas[0].nombreAutor || 'Cliente' }}
-                </p>
-                <div class="small text-muted">
-                  Certificaciones: {{ profesional.certificados?.length ?? 0 }}
                 </div>
               </div>
             </div>
@@ -235,9 +248,17 @@ const busqueda = ref({
 })
 
 const profesionalesDestacados = ref<Profesional[]>([])
+const oficiantesDestacados = ref<Profesional[]>([])
+const perfilesRecientes = ref<Profesional[]>([])
+const tabDestacados = ref<'profesionales' | 'oficiantes'>('profesionales')
 const tipoBusqueda = ref<'oficiante' | 'profesional'>('oficiante')
 const categoriasCargadas = ref<Array<{ id: number; nombre: string; tipo: string; icono?: string }>>([])
 const cargandoCategorias = ref(false)
+
+// Acordeón móvil: solapas desplegables (solo en vista móvil)
+const accordionCerca = ref(false)
+const accordionCategorias = ref(false)
+const accordionDestacados = ref(false)
 
 // Opciones del dropdown según el tipo de búsqueda - cargadas desde el backend
 const opcionesDropdown = computed(() => {
@@ -425,8 +446,7 @@ const cargarCategorias = async (tipo?: 'Oficiante' | 'Profesional') => {
 
 const cargarProfesionalesDestacados = async () => {
   try {
-    const tipo = tipoBusqueda.value === 'oficiante' ? 'Oficiante' : 'Profesional'
-    profesionalesDestacados.value = await profesionalService.obtenerDestacados(tipo)
+    profesionalesDestacados.value = await profesionalService.obtenerDestacados('Profesional')
   } catch (error) {
     // Datos de ejemplo si falla la API - coinciden con la imagen
     profesionalesDestacados.value = [
@@ -490,6 +510,22 @@ const cargarProfesionalesDestacados = async () => {
   }
 }
 
+const cargarOficiantesDestacados = async () => {
+  try {
+    oficiantesDestacados.value = await profesionalService.obtenerDestacados('Oficiante')
+  } catch (error) {
+    oficiantesDestacados.value = []
+  }
+}
+
+const cargarPerfilesRecientes = async () => {
+  try {
+    perfilesRecientes.value = await profesionalService.obtenerRecientes(12)
+  } catch (error) {
+    perfilesRecientes.value = []
+  }
+}
+
 // Sincronizar tipo desde la URL (Oficiantes -> ?tipo=oficiante, Profesionales -> ?tipo=profesional)
 function aplicarTipoDesdeRuta () {
   const tipo = route.query.tipo as string
@@ -513,7 +549,9 @@ onMounted(async () => {
   if (tipo === 'profesional') tipoBusqueda.value = 'profesional'
   await Promise.all([
     cargarCategorias(tipo === 'profesional' ? 'Profesional' : 'Oficiante'),
-    cargarProfesionalesDestacados()
+    cargarProfesionalesDestacados(),
+    cargarOficiantesDestacados(),
+    cargarPerfilesRecientes()
   ])
 })
 </script>
@@ -597,11 +635,6 @@ onMounted(async () => {
 
 .search-button:hover {
   background: #16a34a;
-}
-
-.search-tip {
-  color: #cbd5e1;
-  font-size: 14px;
 }
 
 /* Estilos para la card de profesionales */
@@ -792,6 +825,36 @@ onMounted(async () => {
   font-size: 1.5rem;
 }
 
+/* Pestañas Profesionales / Oficiantes en el hero */
+.hero-tabs {
+  display: flex;
+  gap: 0;
+  margin-bottom: 14px;
+  border-bottom: 2px solid #e2e8f0;
+}
+.hero-tab {
+  flex: 1;
+  padding: 10px 14px;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: #64748b;
+  background: #f8fafc;
+  border: none;
+  border-bottom: 3px solid transparent;
+  margin-bottom: -2px;
+  cursor: pointer;
+  transition: color 0.2s, border-color 0.2s, background 0.2s;
+}
+.hero-tab:hover {
+  color: var(--brand);
+  background: #f0fdf4;
+}
+.hero-tab.active {
+  color: var(--brand);
+  background: #fff;
+  border-bottom-color: var(--brand);
+}
+
 /* Mantener el estilo del hero card */
 .hero-card {
   background: #ffffff;
@@ -838,6 +901,81 @@ onMounted(async () => {
   background: #1e293b;
 }
 
+/* Perfiles agregados recientemente - cards chicas */
+.section-recientes .recientes-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 12px;
+}
+.card-reciente {
+  cursor: pointer;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  overflow: hidden;
+  transition: box-shadow 0.2s, transform 0.2s;
+}
+.card-reciente:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  transform: translateY(-2px);
+}
+.card-reciente-body {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px;
+}
+.card-reciente-avatar {
+  width: 40px;
+  height: 40px;
+  min-width: 40px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--brand), #06b6d4);
+  color: white;
+  font-size: 1rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.card-reciente-info {
+  min-width: 0;
+  flex: 1;
+}
+.card-reciente-nombre {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #0f172a;
+  margin: 0 0 2px 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.card-reciente-oficio {
+  font-size: 0.75rem;
+  color: #64748b;
+  margin: 0 0 4px 0;
+}
+.card-reciente-rating {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+.card-reciente-rating .rating-star.small {
+  font-size: 0.7rem;
+}
+.card-reciente-resenas {
+  font-size: 0.7rem;
+  color: #64748b;
+  margin-left: 2px;
+}
+
+@media (max-width: 576px) {
+  .section-recientes .recientes-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+  }
+}
+
 /* Mantener el estilo del footer */
 footer {
   background: var(--bg-soft);
@@ -854,6 +992,77 @@ footer {
 .small {
   font-size: 13px;
   color: #94a3b8;
+}
+
+/* Solapas desplegables solo en móvil */
+.mobile-only {
+  display: none;
+}
+.desktop-only {
+  display: block;
+}
+
+@media (max-width: 768px) {
+  .mobile-only {
+    display: flex !important;
+  }
+  .desktop-only {
+    display: none !important;
+  }
+  .mobile-accordion-btn {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 14px 18px;
+    font-size: 1.05rem;
+    font-weight: 600;
+    color: #0f172a;
+    background: linear-gradient(135deg, #f0fdf4, #ecfdf5);
+    border: 2px solid rgba(34, 197, 94, 0.3);
+    border-radius: 12px;
+    cursor: pointer;
+    transition: background 0.2s, border-color 0.2s;
+    margin-bottom: 0;
+  }
+  .mobile-accordion-btn:hover {
+    background: linear-gradient(135deg, #dcfce7, #d1fae5);
+    border-color: var(--brand);
+  }
+  .accordion-chevron {
+    font-size: 0.75rem;
+    transition: transform 0.25s ease;
+    flex-shrink: 0;
+  }
+  .accordion-chevron.open {
+    transform: rotate(180deg);
+  }
+  .mobile-accordion-content {
+    overflow: hidden;
+    transition: max-height 0.35s ease, opacity 0.2s ease;
+  }
+  .mobile-accordion-content.collapsed {
+    max-height: 0 !important;
+    opacity: 0;
+    margin-top: 0;
+    padding-top: 0;
+    padding-bottom: 0;
+  }
+  .mobile-accordion-content:not(.collapsed) {
+    max-height: 2000px;
+    margin-top: 12px;
+  }
+  .hero-card.mobile-accordion-wrap .mobile-accordion-content:not(.collapsed) {
+    margin-top: 12px;
+  }
+}
+
+@media (min-width: 769px) {
+  .mobile-accordion-content.collapsed {
+    max-height: none;
+    opacity: 1;
+  }
 }
 
 @media (max-width: 480px) {
