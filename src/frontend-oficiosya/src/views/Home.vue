@@ -20,7 +20,7 @@
                 <SearchableDropdown
                   v-model="busqueda.oficio"
                   :options="opcionesDropdown"
-                  :placeholder="cargandoCategorias ? 'Cargando...' : 'Buscar oficio o categoría'"
+                  :placeholder="placeholderCategoria"
                   :disabled="cargandoCategorias"
                 />
                 <CiudadAutocomplete
@@ -266,6 +266,13 @@ const opcionesDropdown = computed(() => {
   return categoriasCargadas.value
     .filter(c => c.tipo === tipo)
     .map(c => c.nombre)
+})
+
+const placeholderCategoria = computed(() => {
+  if (cargandoCategorias.value) return 'Cargando...'
+  return tipoBusqueda.value === 'oficiante'
+    ? 'Buscar oficio o categoría'
+    : 'Buscar profesión o categoría'
 })
 
 // Datos estáticos

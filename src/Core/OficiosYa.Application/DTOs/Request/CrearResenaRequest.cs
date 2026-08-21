@@ -12,8 +12,7 @@ namespace OficiosYa.Application.DTOs.Request
         [Range(1, 5, ErrorMessage = "La calificación debe ser entre 1 y 5")]
         public int Calificacion { get; set; }
 
-        [Required]
-        [StringLength(1000, MinimumLength = 1, ErrorMessage = "El comentario es obligatorio (máximo 1000 caracteres)")]
-        public string Comentario { get; set; } = string.Empty;
+        [StringLength(1000, ErrorMessage = "El comentario no puede superar 1000 caracteres")]
+        public string? Comentario { get; set; }
     }
 }

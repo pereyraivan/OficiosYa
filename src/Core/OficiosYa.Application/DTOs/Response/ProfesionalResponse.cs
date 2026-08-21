@@ -15,6 +15,12 @@ namespace OficiosYa.Application.DTOs.Response
         public bool Activo { get; set; }
         public List<string> Oficios { get; set; } = new List<string>();
         public string NombreCompleto => $"{Nombre} {Apellido}".Trim();
+
+        /// <summary>Solo registro con plan de pago por transferencia: código para el concepto del MISMO/CVU.</summary>
+        public string? CodigoReferenciaTransferencia { get; set; }
+
+        /// <summary>Monto de la suscripción pendiente de acreditación (ARS).</summary>
+        public decimal? MontoSuscripcionPendienteArs { get; set; }
     }
 }
 

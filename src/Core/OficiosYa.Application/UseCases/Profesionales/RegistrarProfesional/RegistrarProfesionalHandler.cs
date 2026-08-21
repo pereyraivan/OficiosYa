@@ -1,3 +1,4 @@
+using System.Security.Cryptography;
 using AutoMapper;
 using BCrypt.Net;
 using MediatR;
@@ -135,26 +136,61 @@ namespace OficiosYa.Application.UseCases.Profesionales.RegistrarProfesional
                 await _profesionalRepository.AsociarZonasCoberturaAsync(profesionalCreado.Id, zonas);
             }
 
-            // Crear suscripción inicial (plan básico por defecto)
+            // Crear suscripción inicial según el plan elegido en el registro.
             var mesesSuscripcion = request.Request.MesesSuscripcion ?? 1;
-            var planBasico = await _planSuscripcionService.ObtenerPlanPorNombreAsync("Basica");
-            
-            if (planBasico != null)
+            var planSolicitado = (request.Request.PlanSeleccionado ?? "Free").Trim();
+            var planSolicitadoNormalizado = planSolicitado.ToLowerInvariant() switch
             {
-                var precioSuscripcion = await _planSuscripcionService.CalcularPrecioConDescuentoAsync("Basica", mesesSuscripcion);
+                "basica" => "Basico",
+                "basico" => "Basico",
+                _ => planSolicitado
+            };
+
+            string? codigoTransferenciaGenerado = null;
+            decimal? montoSuscripcionPendiente = null;
+
+            // Free no requiere crear registro de suscripción.
+            if (!string.Equals(planSolicitadoNormalizado, "free", StringComparison.OrdinalIgnoreCase))
+            {
+                var planSeleccionado = await _planSuscripcionService.ObtenerPlanPorNombreAsync(planSolicitadoNormalizado);
+                if (planSeleccionado == null)
+                {
+                    throw new ArgumentException($"El plan '{planSolicitado}' no existe.");
+                }
+
+                // PrecioMensual / Trimestral / etc. en BD ya son montos finales por período (no aplicar descuento otra vez).
+                var precioSuscripcion = await _planSuscripcionService.CalcularPrecioAsync(planSeleccionado.Nombre, mesesSuscripcion);
                 var fechaInicio = DateTime.UtcNow;
                 var fechaVencimiento = fechaInicio.AddMonths(mesesSuscripcion);
+
+                var metodoPago = request.Request.MetodoPago?.Trim();
+                if (string.IsNullOrEmpty(metodoPago))
+                    metodoPago = "transferencia";
+                var metodoLower = metodoPago.ToLowerInvariant();
+                string? codigoPagoValor = null;
+                if (metodoLower == "transferencia")
+                {
+                    codigoPagoValor = await GenerarCodigoPagoUnicoAsync();
+                    codigoTransferenciaGenerado = codigoPagoValor;
+                    montoSuscripcionPendiente = precioSuscripcion;
+                    metodoPago = "transferencia";
+                }
+                else if (metodoLower is "rapipago" or "pagosfaciles")
+                {
+                    codigoPagoValor = request.Request.CodigoPago;
+                }
 
                 var suscripcion = new Suscripcion
                 {
                     ProfesionalId = profesionalCreado.Id,
-                    TipoSuscripcion = planBasico.Nombre,
+                    PlanSuscripcionId = planSeleccionado.Id,
+                    TipoSuscripcion = planSeleccionado.Nombre,
                     Precio = precioSuscripcion,
                     FechaInicio = fechaInicio,
                     FechaVencimiento = fechaVencimiento,
                     Estado = "Pendiente", // Pendiente hasta confirmar el pago
-                    MetodoPago = request.Request.MetodoPago,
-                    CodigoPago = request.Request.CodigoPago,
+                    MetodoPago = metodoPago,
+                    CodigoPago = codigoPagoValor,
                     PagoConfirmado = false,
                     FechaRegistro = DateTime.UtcNow
                 };
@@ -176,9 +212,31 @@ namespace OficiosYa.Application.UseCases.Profesionales.RegistrarProfesional
                     .Where(pc => pc.Activo)
                     .Select(pc => pc.CategoriaServicio.Nombre)
                     .ToList();
+                response.CodigoReferenciaTransferencia = codigoTransferenciaGenerado;
+                response.MontoSuscripcionPendienteArs = montoSuscripcionPendiente;
             }
 
             return response;
+        }
+
+        private async Task<string> GenerarCodigoPagoUnicoAsync()
+        {
+            for (var i = 0; i < 12; i++)
+            {
+                var codigo = CrearCodigoReferenciaTransferencia();
+                var existe = await _suscripcionRepository.AnyAsync(s => s.CodigoPago == codigo);
+                if (!existe)
+                    return codigo;
+            }
+
+            return CrearCodigoReferenciaTransferencia();
+        }
+
+        private static string CrearCodigoReferenciaTransferencia()
+        {
+            Span<byte> bytes = stackalloc byte[6];
+            RandomNumberGenerator.Fill(bytes);
+            return "OY-" + Convert.ToHexString(bytes);
         }
     }
 }

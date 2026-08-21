@@ -19,7 +19,7 @@ namespace OficiosYa.Application.UseCases.CategoriaServicios.ObtenerCategoriaServ
 
             if (!string.IsNullOrEmpty(request.Tipo))
             {
-                categorias = await _categoriaRepository.GetByTipoAsync(request.Tipo);
+                categorias = await _categoriaRepository.GetByTipoAsync(request.Tipo, request.SoloActivos);
             }
             else if (request.SoloActivos)
             {

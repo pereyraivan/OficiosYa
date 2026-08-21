@@ -36,6 +36,27 @@ export interface ZonaCoberturaDto {
   codigoPostal?: string
 }
 
+export interface InstruccionesTransferenciaCuenta {
+  etiqueta: string
+  cvuAlias: string
+  titular: string
+}
+
+export interface InstruccionesPagoTransferencia {
+  codigoReferencia: string
+  montoArs: number
+  moneda: string
+  planNombre: string
+  meses: number
+  mensajeConcepto: string
+  cuentas: InstruccionesTransferenciaCuenta[]
+}
+
+export interface RegistrarProfesionalApiResponse {
+  profesional: Profesional
+  instruccionesTransferencia?: InstruccionesPagoTransferencia | null
+}
+
 export interface RegistrarProfesionalRequest {
   nombre: string
   apellido: string
@@ -52,6 +73,7 @@ export interface RegistrarProfesionalRequest {
   fotoPerfil?: string
   metodoPago?: string
   codigoPago?: string
+  planSeleccionado?: string
   mesesSuscripcion?: number
   /** Opcional. Imágenes de trabajos en base64 (data:image/...;base64,...) */
   imagenesTrabajoBase64?: string[]
@@ -74,7 +96,8 @@ export interface Profesional {
   fechaRegistro: string
   activo: boolean
   usuario: Usuario
-  oficios: Oficio[]
+  /** Nombres de categorías (ej. Plomero, Electricista). */
+  oficios: string[]
   certificados: Certificado[]
   resenas: Resena[]
 }
@@ -103,7 +126,7 @@ export interface CrearResenaRequest {
   /** Cómo querés que aparezca tu nombre (obligatorio si no estás logueado). */
   autorNombre?: string
   calificacion: number
-  comentario: string
+  comentario?: string
 }
 
 // Tipos para Certificados
@@ -115,33 +138,6 @@ export interface Certificado {
   fechaEmision: string
   fechaVencimiento?: string
   archivoUrl?: string
-}
-
-// Tipos para Oficios
-export interface Oficio {
-  id: number
-  nombre: string
-  descripcion?: string
-  icono?: string
-  color?: string
-  activo: boolean
-  fechaCreacion: string
-}
-
-export interface CrearOficioRequest {
-  nombre: string
-  descripcion?: string
-  icono?: string
-  color?: string
-}
-
-export interface ActualizarOficioRequest {
-  id: number
-  nombre: string
-  descripcion?: string
-  icono?: string
-  color?: string
-  activo: boolean
 }
 
 // Tipos para Categorías de Servicio
@@ -177,6 +173,90 @@ export interface SuscripcionActiva {
   tipo: string
   fechaVencimiento: string
   estado: string
+}
+
+export interface SuscripcionPendiente {
+  id: number
+  tipo: string
+  precio: number
+  codigoPago?: string | null
+  estado: string
+  fechaRegistro: string
+}
+
+export interface SolicitarSuscripcionRequest {
+  planSeleccionado: string
+  mesesSuscripcion: number
+  metodoPago?: string
+}
+
+export interface SolicitarSuscripcionApiResponse {
+  suscripcionId: number
+  yaExistente: boolean
+  instruccionesTransferencia?: InstruccionesPagoTransferencia | null
+}
+
+export interface SuscripcionPendienteAdmin {
+  id: number
+  profesionalId: number
+  profesionalNombre: string
+  profesionalEmail: string
+  profesionalTelefono?: string | null
+  planSuscripcionId?: number | null
+  planNombre: string
+  precio: number
+  codigoPago?: string | null
+  metodoPago?: string | null
+  estado: string
+  fechaRegistro: string
+  fechaInicio: string
+  fechaVencimiento: string
+  mesesDuracion: number
+}
+
+export interface ConfirmarSuscripcionAdminResponse {
+  id: number
+  estado: string
+  pagoConfirmado: boolean
+  fechaPago?: string | null
+  fechaInicio: string
+  fechaVencimiento: string
+  mensaje: string
+}
+
+/** Listado admin de profesionales / oficiantes */
+export interface ProfesionalAdmin {
+  id: number
+  usuarioId: number
+  nombre: string
+  apellido: string
+  email: string
+  telefono?: string | null
+  ciudad?: string | null
+  provincia?: string | null
+  descripcion?: string | null
+  tipos: string[]
+  categorias: string[]
+  planActual: string
+  suscripcionEstado?: string | null
+  disponible: boolean
+  activo: boolean
+  calificacionPromedio: number
+  totalResenas: number
+  fechaRegistro: string
+}
+
+export interface ActualizarProfesionalAdminRequest {
+  nombre: string
+  apellido: string
+  email: string
+  telefono?: string | null
+  ciudad?: string | null
+  provincia?: string | null
+  descripcion?: string | null
+  disponible: boolean
+  activo: boolean
+  categorias?: string[]
 }
 
 // Tipos para API Response

@@ -3,6 +3,9 @@
 ##
 ## Get latest from https://github.com/github/gitignore/blob/master/VisualStudio.gitignore
 
+# SMTP / claves locales (no subir)
+src/OficiosYa.Web/appsettings.Local.json
+
 # User-specific files
 *.rsuser
 *.suo

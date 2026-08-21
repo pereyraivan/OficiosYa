@@ -10,8 +10,11 @@ using System.Text.Encodings.Web;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using OficiosYa.Web.Services;
+using OficiosYa.Web.Options;
 
 var builder = WebApplication.CreateBuilder(args);
+// Sobrescribe config local (no versionado): copiá appsettings.Local.json.example → appsettings.Local.json.
+builder.Configuration.AddJsonFile("appsettings.Local.json", optional: true, reloadOnChange: true);
 
 // Add services to the container.
 // Configurar encoder para permitir todos los caracteres Unicode (incluyendo ñ y acentos)
@@ -39,8 +42,8 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
 // Registrar Repositories
 builder.Services.AddScoped(typeof(IRepository<>), typeof(Repository<>));
 builder.Services.AddScoped<IUsuarioRepository, UsuarioRepository>();
+builder.Services.AddScoped<IPasswordResetTokenRepository, PasswordResetTokenRepository>();
 builder.Services.AddScoped<IProfesionalRepository, ProfesionalRepository>();
-builder.Services.AddScoped<IOficioRepository, OficioRepository>();
 builder.Services.AddScoped<ICategoriaServicioRepository, CategoriaServicioRepository>();
 builder.Services.AddScoped<ITipoServicioRepository, TipoServicioRepository>();
 builder.Services.AddScoped<IPlanSuscripcionRepository, PlanSuscripcionRepository>();
@@ -49,6 +52,10 @@ builder.Services.AddScoped<IPlanSuscripcionRepository, PlanSuscripcionRepository
 builder.Services.AddScoped<OficiosYa.Application.Services.IPlanSuscripcionService, OficiosYa.Application.Services.PlanSuscripcionService>();
 builder.Services.AddHttpClient<IOpenAIModerationService, OpenAIModerationService>();
 builder.Services.AddHttpClient<IImageModerationService, SightengineImageModerationService>();
+builder.Services.Configure<TransferenciaSuscripcionOptions>(builder.Configuration.GetSection("TransferenciaSuscripcion"));
+builder.Services.Configure<EmailOptions>(builder.Configuration.GetSection("Email"));
+builder.Services.Configure<AppOptions>(builder.Configuration.GetSection("App"));
+builder.Services.AddScoped<OficiosYa.Application.Services.IPasswordResetEmailService, PasswordResetEmailService>();
 
 // JWT
 builder.Services.AddScoped<JwtTokenService>();
@@ -123,6 +130,14 @@ builder.Services.AddCors(options =>
 });
 
 var app = builder.Build();
+
+var emailEnabled = builder.Configuration.GetValue<bool>("Email:Enabled");
+var emailUser = builder.Configuration["Email:Username"] ?? "(vacío)";
+app.Logger.LogInformation(
+    "Email SMTP al iniciar: Enabled={Enabled}, Username={Username}, Host={Host}",
+    emailEnabled,
+    emailUser,
+    builder.Configuration["Email:SmtpHost"]);
 
 // Configure the HTTP request pipeline.
 if (!app.Environment.IsDevelopment())

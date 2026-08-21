@@ -2,8 +2,11 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Authorization;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
 using OficiosYa.Application.DTOs.Request;
+using OficiosYa.Application.DTOs.Response;
 using OficiosYa.Application.UseCases.Profesionales.RegistrarProfesional;
+using OficiosYa.Application.UseCases.Profesionales.SolicitarSuscripcion;
 using OficiosYa.Persistence.Context;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Data.SqlClient;
@@ -12,6 +15,8 @@ using System.Data.Common;
 using System.Security.Claims;
 using OficiosYa.Domain.Entities;
 using OficiosYa.Web.Services;
+using OficiosYa.Web.Contracts;
+using OficiosYa.Web.Options;
 
 namespace OficiosYa.Web.Controllers.Api
 {
@@ -23,13 +28,23 @@ namespace OficiosYa.Web.Controllers.Api
         private readonly ApplicationDbContext _context;
         private readonly IWebHostEnvironment _environment;
         private readonly IOpenAIModerationService _moderation;
+        private readonly TransferenciaSuscripcionOptions _transferenciaSuscripcion;
+        private readonly ILogger<ProfesionalesController> _logger;
 
-        public ProfesionalesController(IMediator mediator, ApplicationDbContext context, IWebHostEnvironment environment, IOpenAIModerationService moderation)
+        public ProfesionalesController(
+            IMediator mediator,
+            ApplicationDbContext context,
+            IWebHostEnvironment environment,
+            IOpenAIModerationService moderation,
+            IOptions<TransferenciaSuscripcionOptions> transferenciaSuscripcion,
+            ILogger<ProfesionalesController> logger)
         {
             _mediator = mediator;
             _context = context;
             _environment = environment;
             _moderation = moderation;
+            _transferenciaSuscripcion = transferenciaSuscripcion.Value;
+            _logger = logger;
         }
 
         [HttpPost("registrar")]
@@ -96,7 +111,14 @@ namespace OficiosYa.Web.Controllers.Api
                     await GuardarImagenesTrabajoAsync(profesional.Id, request.ImagenesTrabajoBase64);
                 }
 
-                return CreatedAtAction(nameof(ObtenerProfesional), new { id = profesional.Id }, profesional);
+                var instrucciones = ConstruirInstruccionesTransferencia(request, profesional);
+
+                var payload = new RegistrarProfesionalApiResponse
+                {
+                    Profesional = profesional,
+                    InstruccionesTransferencia = instrucciones
+                };
+                return CreatedAtAction(nameof(ObtenerProfesional), new { id = profesional.Id }, payload);
             }
             catch (ArgumentException ex)
             {
@@ -172,6 +194,8 @@ namespace OficiosYa.Web.Controllers.Api
 
             var suscripcionActiva = profesional.Suscripciones
                 .FirstOrDefault(s => s.Estado == "Activa" && s.FechaVencimiento > DateTime.UtcNow);
+            var suscripcionPendiente = profesional.Suscripciones
+                .FirstOrDefault(s => s.Estado == "Pendiente" && !s.PagoConfirmado);
             var planActual = suscripcionActiva?.TipoSuscripcion ?? "Free";
             var limiteContactos = PlanLimitsHelper.GetLimiteContactosMensuales(planActual);
             var inicioMes = new DateTime(DateTime.UtcNow.Year, DateTime.UtcNow.Month, 1, 0, 0, 0, DateTimeKind.Utc);
@@ -231,6 +255,15 @@ namespace OficiosYa.Web.Controllers.Api
                         tipo = suscripcionActiva.TipoSuscripcion,
                         fechaVencimiento = suscripcionActiva.FechaVencimiento.ToString("yyyy-MM-dd"),
                         estado = suscripcionActiva.Estado
+                    } : null,
+                    suscripcionPendiente = suscripcionPendiente != null ? new
+                    {
+                        id = suscripcionPendiente.Id,
+                        tipo = suscripcionPendiente.TipoSuscripcion,
+                        precio = suscripcionPendiente.Precio,
+                        codigoPago = suscripcionPendiente.CodigoPago,
+                        estado = suscripcionPendiente.Estado,
+                        fechaRegistro = suscripcionPendiente.FechaRegistro.ToString("yyyy-MM-dd")
                     } : null,
                     planActual,
                     limiteContactosMensual = limiteContactos,
@@ -352,11 +385,12 @@ namespace OficiosYa.Web.Controllers.Api
         {
             if (request == null || request.Calificacion < 1 || request.Calificacion > 5)
                 return BadRequest(new { message = "La calificación debe ser entre 1 y 5" });
-            if (string.IsNullOrWhiteSpace(request.Comentario) || request.Comentario.Length > 1000)
-                return BadRequest(new { message = "El comentario es obligatorio y no puede superar 1000 caracteres" });
+            if (!string.IsNullOrWhiteSpace(request.Comentario) && request.Comentario.Length > 1000)
+                return BadRequest(new { message = "El comentario no puede superar 1000 caracteres" });
 
+            var comentario = request.Comentario?.Trim();
             // Siempre moderar reseñas: filtro local de palabras (insultos/profanidad). Si hay API key de OpenAI, además se usa la API.
-            var textosResena = new[] { request.Comentario.Trim(), request.AutorNombre?.Trim() ?? "" }.Where(x => !string.IsNullOrEmpty(x)).ToList();
+            var textosResena = new[] { comentario ?? "", request.AutorNombre?.Trim() ?? "" }.Where(x => !string.IsNullOrEmpty(x)).ToList();
             var (aprobado, mensaje) = await _moderation.ModerateAsync(textos: textosResena.Count > 0 ? textosResena : null);
             if (!aprobado)
                 return BadRequest(new { message = mensaje });
@@ -389,7 +423,7 @@ namespace OficiosYa.Web.Controllers.Api
                 UsuarioId = usuarioId,
                 AutorNombre = autorNombre,
                 Calificacion = request.Calificacion,
-                Comentario = request.Comentario?.Trim() ?? "",
+                Comentario = string.IsNullOrWhiteSpace(comentario) ? null : comentario,
                 FechaCreacion = DateTime.UtcNow,
                 Activa = true
             };
@@ -532,30 +566,153 @@ namespace OficiosYa.Web.Controllers.Api
             return Ok(new { success = true, message = "Perfil actualizado correctamente." });
         }
 
+        /// <summary>
+        /// Solicita un plan de pago para el profesional autenticado (transferencia, suscripción Pendiente).
+        /// </summary>
+        [HttpPost("solicitar-suscripcion")]
+        [Authorize]
+        public async Task<IActionResult> SolicitarSuscripcion([FromBody] SolicitarSuscripcionRequest request)
+        {
+            var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier) ?? User.FindFirstValue("sub");
+            if (string.IsNullOrEmpty(userIdClaim) || !int.TryParse(userIdClaim, out var userId))
+                return Unauthorized(new { message = "Token inválido" });
+
+            try
+            {
+                var command = new SolicitarSuscripcionCommand
+                {
+                    UsuarioId = userId,
+                    Request = request
+                };
+                var result = await _mediator.Send(command);
+
+                var instrucciones = ConstruirInstruccionesTransferenciaDesdeSuscripcion(
+                    result.PlanNombre,
+                    result.Meses,
+                    result.CodigoReferenciaTransferencia,
+                    result.MontoSuscripcionPendienteArs);
+
+                return Ok(new SolicitarSuscripcionApiResponse
+                {
+                    SuscripcionId = result.SuscripcionId,
+                    YaExistente = result.YaExistente,
+                    InstruccionesTransferencia = instrucciones
+                });
+            }
+            catch (InvalidOperationException ex)
+            {
+                return NotFound(new { message = ex.Message });
+            }
+            catch (ArgumentException ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new
+                {
+                    message = "Error al solicitar suscripción",
+                    error = ex.Message,
+                    innerError = ex.InnerException?.Message
+                });
+            }
+        }
+
         [HttpGet("planes-suscripcion")]
         public async Task<IActionResult> ObtenerPlanesSuscripcion()
         {
             try
             {
-                var planes = await _context.PlanesSuscripcion
-                    .Where(p => p.Activo)
-                    .OrderBy(p => p.PrecioMensual)
-                    .Select(p => new
-                    {
-                        id = p.Id,
-                        nombre = p.Nombre,
-                        descripcion = p.Descripcion,
-                        precioMensual = p.PrecioMensual,
-                        precioTrimestral = p.PrecioTrimestral,
-                        precioSemestral = p.PrecioSemestral,
-                        precioAnual = p.PrecioAnual,
-                        descuentoTrimestral = p.DescuentoTrimestral,
-                        descuentoSemestral = p.DescuentoSemestral,
-                        descuentoAnual = p.DescuentoAnual
-                    })
+                var planesDb = await _context.PlanesSuscripcion
+                    .Where(p => p.Activo
+                        && p.Nombre.ToLower() != "free"
+                        && p.Nombre.ToLower() != "gratis")
                     .ToListAsync();
 
-                return Ok(planes);
+                decimal PrecioConDescuento(decimal mensual, int meses, decimal descuento)
+                {
+                    var total = mensual * meses;
+                    return total * (1 - (descuento / 100m));
+                }
+
+                PlanPublicoDto MapearPlan(PlanSuscripcion p)
+                {
+                    var nombreNormalizado = p.Nombre.Trim().ToLowerInvariant();
+                    var esBasica = nombreNormalizado == "basica" || nombreNormalizado == "basico";
+                    var esPro = nombreNormalizado == "pro";
+                    var esPremium = nombreNormalizado == "premium";
+
+                    var nombre = esBasica ? "Basico" : (esPro ? "Pro" : (esPremium ? "Premium" : p.Nombre));
+                    var descripcion = esBasica
+                        ? "20 contactos por mes. Ver empleos publicados (sin postularte)."
+                        : esPro
+                            ? "Contactos ilimitados y hasta 5 postulaciones a empleos."
+                            : esPremium
+                                ? "Todo ilimitado: contactos y postulaciones."
+                                : p.Descripcion;
+
+                    var precioMensual = esBasica ? 6900m : (esPro ? 11900m : (esPremium ? 17900m : p.PrecioMensual));
+                    const decimal descuentoTrimestral = 10m;
+                    const decimal descuentoSemestral = 15m;
+                    const decimal descuentoAnual = 20m;
+
+                    return new PlanPublicoDto
+                    {
+                        Id = p.Id,
+                        Nombre = nombre,
+                        Descripcion = descripcion ?? string.Empty,
+                        PrecioMensual = precioMensual,
+                        PrecioTrimestral = PrecioConDescuento(precioMensual, 3, descuentoTrimestral),
+                        PrecioSemestral = PrecioConDescuento(precioMensual, 6, descuentoSemestral),
+                        PrecioAnual = PrecioConDescuento(precioMensual, 12, descuentoAnual),
+                        DescuentoTrimestral = descuentoTrimestral,
+                        DescuentoSemestral = descuentoSemestral,
+                        DescuentoAnual = descuentoAnual
+                    };
+                }
+
+                var planes = planesDb
+                    .Select(MapearPlan)
+                    .ToList();
+
+                planes.Insert(0, new PlanPublicoDto
+                {
+                    Id = 0,
+                    Nombre = "Free",
+                    Descripcion = "5 contactos. Puede ver empleos, pero no postularse.",
+                    PrecioMensual = 0m,
+                    PrecioTrimestral = 0m,
+                    PrecioSemestral = 0m,
+                    PrecioAnual = 0m,
+                    DescuentoTrimestral = 0m,
+                    DescuentoSemestral = 0m,
+                    DescuentoAnual = 0m
+                });
+
+                planes = planes
+                    .OrderBy(p => p.Nombre switch
+                    {
+                        "Free" => 0,
+                        "Basico" => 1,
+                        "Pro" => 2,
+                        "Premium" => 3,
+                        _ => 99
+                    })
+                    .ToList();
+
+                return Ok(planes.Select(p => new
+                {
+                    id = p.Id,
+                    nombre = p.Nombre,
+                    descripcion = p.Descripcion,
+                    precioMensual = p.PrecioMensual,
+                    precioTrimestral = p.PrecioTrimestral,
+                    precioSemestral = p.PrecioSemestral,
+                    precioAnual = p.PrecioAnual,
+                    descuentoTrimestral = p.DescuentoTrimestral,
+                    descuentoSemestral = p.DescuentoSemestral,
+                    descuentoAnual = p.DescuentoAnual
+                }));
             }
             catch (Microsoft.Data.SqlClient.SqlException sqlEx) when (sqlEx.Message.Contains("Invalid object name") && sqlEx.Message.Contains("PlanesSuscripcion"))
             {
@@ -583,7 +740,7 @@ namespace OficiosYa.Web.Controllers.Api
         }
 
         /// <summary>
-        /// Indica si el profesional autenticado puede postularse a empleos (solo plan Premium).
+        /// Indica si el profesional autenticado puede postularse a empleos (plan Pro o Premium).
         /// Si no está autenticado o no es profesional, puede = false.
         /// </summary>
         [HttpGet("yo-puedo-postular-empleos")]
@@ -913,7 +1070,7 @@ namespace OficiosYa.Web.Controllers.Api
 
         /// <summary>
         /// Registra un contacto (clic en "Contactar") hacia el profesional. Usado para conteo y planes por contacto.
-        /// No requiere autenticación. Respeta límites del plan (Free: 2/mes, Básica: 15/mes, Premium: ilimitado).
+        /// No requiere autenticación. Respeta límites del plan (Free: 5/mes, Básico: 20/mes, Pro/Premium: ilimitado).
         /// </summary>
         [HttpPost("{id}/registrar-contacto")]
         public async Task<IActionResult> RegistrarContacto(int id, [FromBody] RegistrarContactoRequest? request = null)
@@ -989,12 +1146,9 @@ namespace OficiosYa.Web.Controllers.Api
         [HttpGet("buscar")]
         public async Task<IActionResult> BuscarProfesionales(
             [FromQuery] string? termino = null,
-            [FromQuery] int? oficioId = null,
             [FromQuery] int? categoriaId = null,
-            [FromQuery] string? oficio = null, // Nombre del oficio/categoría
-            [FromQuery] string? zona = null, // Zona/ciudad de búsqueda
-            [FromQuery] decimal? precioMin = null,
-            [FromQuery] decimal? precioMax = null,
+            [FromQuery] string? oficio = null, // Nombre de categoría
+            [FromQuery] string? zona = null,
             [FromQuery] string? localidad = null,
             [FromQuery] string? provincia = null)
         {
@@ -1016,14 +1170,6 @@ namespace OficiosYa.Web.Controllers.Api
                         (p.Descripcion != null && p.Descripcion.Contains(termino, StringComparison.OrdinalIgnoreCase)) ||
                         (p.Usuario.Nombre != null && p.Usuario.Nombre.Contains(termino, StringComparison.OrdinalIgnoreCase)) ||
                         (p.Usuario.Apellido != null && p.Usuario.Apellido.Contains(termino, StringComparison.OrdinalIgnoreCase))
-                    ).ToList();
-                }
-
-                // Filtrar por oficio
-                if (oficioId.HasValue)
-                {
-                    profesionales = profesionales.Where(p => 
-                        p.ProfesionalOficios.Any(po => po.OficioId == oficioId.Value && po.Activo)
                     ).ToList();
                 }
 
@@ -1187,6 +1333,62 @@ namespace OficiosYa.Web.Controllers.Api
             }
         }
 
+        private static bool EsPlanDePago(RegistrarProfesionalRequest request)
+        {
+            var plan = (request.PlanSeleccionado ?? "Free").Trim();
+            return !plan.Equals("Free", StringComparison.OrdinalIgnoreCase);
+        }
+
+        private InstruccionesPagoTransferenciaDto? ConstruirInstruccionesTransferencia(
+            RegistrarProfesionalRequest request,
+            ProfesionalResponse profesional)
+        {
+            if (!EsPlanDePago(request))
+                return null;
+
+            var metodo = (request.MetodoPago ?? "transferencia").Trim().ToLowerInvariant();
+            if (metodo != "transferencia")
+                return null;
+
+            return ConstruirInstruccionesTransferenciaDesdeSuscripcion(
+                (request.PlanSeleccionado ?? string.Empty).Trim(),
+                request.MesesSuscripcion ?? 1,
+                profesional.CodigoReferenciaTransferencia?.Trim(),
+                profesional.MontoSuscripcionPendienteArs);
+        }
+
+        private InstruccionesPagoTransferenciaDto? ConstruirInstruccionesTransferenciaDesdeSuscripcion(
+            string planNombre,
+            int meses,
+            string? codigo,
+            decimal? monto)
+        {
+            if (string.IsNullOrEmpty(codigo) || !monto.HasValue || monto.Value <= 0)
+                return null;
+
+            var cuentas = (_transferenciaSuscripcion.Cuentas ?? new List<CuentaTransferenciaConfigItem>())
+                .Where(c => !string.IsNullOrWhiteSpace(c.CvuAlias) &&
+                            !c.CvuAlias.Contains("COMPLETAR", StringComparison.OrdinalIgnoreCase))
+                .Select(c => new InstruccionesTransferenciaCuentaDto
+                {
+                    Etiqueta = c.Etiqueta?.Trim() ?? "Cuenta",
+                    CvuAlias = c.CvuAlias.Trim(),
+                    Titular = (c.Titular ?? string.Empty).Trim()
+                })
+                .ToList();
+
+            return new InstruccionesPagoTransferenciaDto
+            {
+                CodigoReferencia = codigo,
+                MontoArs = monto.Value,
+                Moneda = "ARS",
+                PlanNombre = planNombre,
+                Meses = meses,
+                MensajeConcepto = _transferenciaSuscripcion.MensajeConcepto?.Trim() ?? string.Empty,
+                Cuentas = cuentas
+            };
+        }
+
         private async Task<string?> GuardarFotoPerfilAsync(int profesionalId, string dataUrl)
         {
             if (string.IsNullOrWhiteSpace(dataUrl) || !dataUrl.StartsWith("data:image/", StringComparison.OrdinalIgnoreCase))
@@ -1282,5 +1484,19 @@ namespace OficiosYa.Web.Controllers.Api
     public class ValidarImagenesRequest
     {
         public List<string>? ImagenesBase64 { get; set; }
+    }
+
+    internal sealed class PlanPublicoDto
+    {
+        public int Id { get; set; }
+        public string Nombre { get; set; } = string.Empty;
+        public string Descripcion { get; set; } = string.Empty;
+        public decimal PrecioMensual { get; set; }
+        public decimal PrecioTrimestral { get; set; }
+        public decimal PrecioSemestral { get; set; }
+        public decimal PrecioAnual { get; set; }
+        public decimal DescuentoTrimestral { get; set; }
+        public decimal DescuentoSemestral { get; set; }
+        public decimal DescuentoAnual { get; set; }
     }
 }

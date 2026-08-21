@@ -1,0 +1,22 @@
+{
+  "TransferenciaSuscripcion": {
+    "Cuentas": [
+      { "Etiqueta": "Ualá", "CvuAlias": "tu.alias.uala", "Titular": "Nombre Apellido" },
+      { "Etiqueta": "Brubank", "CvuAlias": "tu.alias.brubank", "Titular": "Nombre Apellido" },
+      { "Etiqueta": "Personal Pay", "CvuAlias": "tu.alias.personalpay", "Titular": "Nombre Apellido" }
+    ]
+  },
+  "Email": {
+    "Enabled": true,
+    "SmtpHost": "smtp.gmail.com",
+    "SmtpPort": 587,
+    "UseSsl": true,
+    "Username": "tu-email@gmail.com",
+    "Password": "tu-app-password-de-16-caracteres",
+    "FromAddress": "tu-email@gmail.com",
+    "FromName": "OficiosYa"
+  },
+  "App": {
+    "FrontendBaseUrl": "http://localhost:5173"
+  }
+}

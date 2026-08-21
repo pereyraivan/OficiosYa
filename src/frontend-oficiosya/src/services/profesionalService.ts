@@ -1,5 +1,5 @@
 import api from './api'
-import type { Profesional, BuscarProfesionalesRequest, RegistrarProfesionalRequest, ApiResponse, CategoriaServicio, ZonaCoberturaDto, SuscripcionActiva, Resena, CrearResenaRequest } from '../types'
+import type { Profesional, BuscarProfesionalesRequest, RegistrarProfesionalRequest, RegistrarProfesionalApiResponse, ApiResponse, CategoriaServicio, ZonaCoberturaDto, SuscripcionActiva, SuscripcionPendiente, SolicitarSuscripcionRequest, SolicitarSuscripcionApiResponse, Resena, CrearResenaRequest } from '../types'
 
 export const profesionalService = {
   // Validar imágenes (moderación) antes de subir. Lanza si no pasan.
@@ -8,9 +8,9 @@ export const profesionalService = {
     return response.data
   },
 
-  // Registrar profesional
-  async registrar(datos: RegistrarProfesionalRequest): Promise<Profesional> {
-    const response = await api.post<Profesional>('/profesionales/registrar', datos)
+  // Registrar profesional (201: profesional + opcional instruccionesTransferencia si plan de pago por transferencia)
+  async registrar(datos: RegistrarProfesionalRequest): Promise<RegistrarProfesionalApiResponse> {
+    const response = await api.post<RegistrarProfesionalApiResponse>('/profesionales/registrar', datos)
     return response.data
   },
 
@@ -176,18 +176,32 @@ export const profesionalService = {
     }
   },
 
-  /** Indica si el profesional autenticado puede postularse a empleos (solo Premium). */
+  /** Indica si el profesional autenticado puede postularse a empleos (Pro/Premium). */
   async yoPuedoPostularEmpleos(): Promise<{ puedePostularEmpleos: boolean; planActual: string }> {
     const response = await api.get<{ puedePostularEmpleos: boolean; planActual: string }>('/profesionales/yo-puedo-postular-empleos')
     return response.data ?? { puedePostularEmpleos: false, planActual: 'Free' }
   },
 
   /** Perfil del profesional autenticado (para el panel). Requiere token. */
-  async obtenerMiPerfil(): Promise<Profesional & { suscripcionActiva?: SuscripcionActiva | null }> {
+  async obtenerMiPerfil(): Promise<Profesional & {
+    suscripcionActiva?: SuscripcionActiva | null
+    suscripcionPendiente?: SuscripcionPendiente | null
+    planActual?: string
+  }> {
     const response = await api.get<{ success: boolean; data: any }>('/profesionales/mi-perfil')
     const data = response.data?.data ?? response.data
     if (!data) throw new Error('No se recibieron datos del perfil.')
-    return data as Profesional & { suscripcionActiva?: SuscripcionActiva | null }
+    return data as Profesional & {
+      suscripcionActiva?: SuscripcionActiva | null
+      suscripcionPendiente?: SuscripcionPendiente | null
+      planActual?: string
+    }
+  },
+
+  /** Solicitar plan de pago (transferencia) para profesional autenticado. */
+  async solicitarSuscripcion(datos: SolicitarSuscripcionRequest): Promise<SolicitarSuscripcionApiResponse> {
+    const response = await api.post<SolicitarSuscripcionApiResponse>('/profesionales/solicitar-suscripcion', datos)
+    return response.data
   },
 
   /** Actualizar perfil del profesional (descripción, disponible, foto, zonas, categorías). */

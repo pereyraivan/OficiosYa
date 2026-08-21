@@ -11,6 +11,14 @@
       </div>
 
       <div v-else-if="profesional" class="container perfil-container">
+        <button
+          v-if="mostrarVolverBusqueda"
+          type="button"
+          class="btn-volver-perfil"
+          @click="volverABusqueda"
+        >
+          ← Volver a resultados
+        </button>
         <!-- Card principal -->
         <div class="perfil-card">
           <!-- Tabs: paso 1 Datos y contacto, paso 2 Reseñas -->
@@ -166,34 +174,42 @@
             <!-- Formulario para dejar reseña (todos pueden, sin login; solo se oculta en el propio perfil) -->
             <div v-if="mostrarFormularioResena" class="resena-form">
               <div class="resena-form-campo">
-                <label for="resena-nombre">Tu nombre (cómo querés que aparezca)</label>
+                <label for="resena-nombre">
+                  Tu nombre (cómo querés que aparezca)<span v-if="!authStore.estaAutenticado" class="campo-obligatorio"> *</span>
+                </label>
                 <input
                   id="resena-nombre"
                   v-model="formResena.autorNombre"
                   type="text"
                   class="resena-input"
+                  :class="{ 'resena-input-error': erroresResena.nombre }"
                   :placeholder="authStore.estaAutenticado ? 'Opcional: se usará tu nombre de cuenta' : 'Ej: María, Juan P., Cliente satisfecho...'"
                   maxlength="100"
+                  @input="erroresResena.nombre = ''"
                 />
+                <p v-if="erroresResena.nombre" class="resena-campo-error">{{ erroresResena.nombre }}</p>
               </div>
-              <div class="resena-form-stars">
-                <span class="resena-form-label">Calificación</span>
+              <div class="resena-form-stars" :class="{ 'resena-stars-error': erroresResena.calificacion }">
+                <span class="resena-form-label">Calificación <span class="campo-obligatorio">*</span></span>
                 <button
                   v-for="n in 5"
                   :key="n"
                   type="button"
                   class="star-btn"
                   :class="{ active: formResena.calificacion >= n }"
-                  @click="formResena.calificacion = n"
+                  @click="formResena.calificacion = n; erroresResena.calificacion = ''"
                   :aria-label="`${n} estrella(s)`"
                 >
                   ★
                 </button>
               </div>
+              <p v-if="erroresResena.calificacion" class="resena-campo-error">{{ erroresResena.calificacion }}</p>
+              <label for="resena-comentario-perfil" class="resena-form-label resena-comentario-label">Comentario (opcional)</label>
               <textarea
+                id="resena-comentario-perfil"
                 v-model="formResena.comentario"
                 class="resena-textarea"
-                placeholder="Contá tu experiencia con este profesional..."
+                placeholder="Contá tu experiencia con este profesional (opcional)..."
                 rows="3"
                 maxlength="1000"
               />
@@ -202,7 +218,7 @@
                 <button
                   type="button"
                   class="cta"
-                  :disabled="!puedeEnviarResena"
+                  :disabled="enviandoResena"
                   @click="enviarResena"
                 >
                   {{ enviandoResena ? 'Enviando...' : 'Publicar reseña' }}
@@ -307,6 +323,16 @@ const ratingPromedio = computed(() => {
   return Math.min(5, Math.max(0, v))
 })
 
+const mostrarVolverBusqueda = computed(() => route.query.from === 'busqueda')
+
+function volverABusqueda () {
+  const query: Record<string, string> = {}
+  if (route.query.oficio) query.oficio = String(route.query.oficio)
+  if (route.query.zona) query.zona = String(route.query.zona)
+  query.tipo = route.query.tipo ? String(route.query.tipo) : 'oficiante'
+  router.push({ name: 'Oficiantes', query })
+}
+
 const carouselIndex = ref(0)
 
 function urlImagenTrabajo (path: string) {
@@ -328,6 +354,7 @@ const cargandoResenas = ref(false)
 const formResena = ref({ autorNombre: '', calificacion: 0, comentario: '' })
 const enviandoResena = ref(false)
 const errorResena = ref('')
+const erroresResena = ref({ nombre: '', calificacion: '' })
 
 const esPropioPerfil = computed(() => {
   if (!authStore.estaAutenticado || !profesional.value) return false
@@ -340,11 +367,22 @@ const mostrarFormularioResena = computed(() => {
   return !esPropioPerfil.value
 })
 
-const puedeEnviarResena = computed(() => {
-  if (enviandoResena.value || !formResena.value.comentario?.trim() || formResena.value.calificacion < 1) return false
-  if (!authStore.estaAutenticado && !formResena.value.autorNombre?.trim()) return false
-  return true
-})
+function validarFormularioResena (): boolean {
+  erroresResena.value = { nombre: '', calificacion: '' }
+  let valido = true
+
+  if (formResena.value.calificacion < 1) {
+    erroresResena.value.calificacion = 'Seleccioná una calificación con las estrellas'
+    valido = false
+  }
+
+  if (!authStore.estaAutenticado && !formResena.value.autorNombre?.trim()) {
+    erroresResena.value.nombre = 'El nombre es obligatorio'
+    valido = false
+  }
+
+  return valido
+}
 
 function formatearFechaResena (fecha: string) {
   if (!fecha) return ''
@@ -371,14 +409,17 @@ async function cargarResenas () {
 
 async function enviarResena () {
   const id = Number(route.params.id)
-  if (!id || formResena.value.calificacion < 1 || !formResena.value.comentario?.trim()) return
-  enviandoResena.value = true
+  if (!id) return
   errorResena.value = ''
+  if (!validarFormularioResena()) return
+
+  enviandoResena.value = true
   try {
+    const comentario = formResena.value.comentario?.trim()
     await profesionalService.crearResena(id, {
       autorNombre: formResena.value.autorNombre?.trim() || undefined,
       calificacion: formResena.value.calificacion,
-      comentario: formResena.value.comentario.trim()
+      comentario: comentario || undefined
     })
     formResena.value = { autorNombre: '', calificacion: 0, comentario: '' }
     await cargarResenas()
@@ -506,6 +547,10 @@ function irAInicio () {
   router.push('/')
 }
 function irAOficiantes () {
+  if (mostrarVolverBusqueda.value) {
+    volverABusqueda()
+    return
+  }
   router.push('/oficiantes')
 }
 function irARegistro () {
@@ -583,6 +628,24 @@ onMounted(cargarPerfil)
 .perfil-container {
   max-width: 720px;
   margin: 0 auto;
+}
+
+.btn-volver-perfil {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 16px;
+  padding: 8px 0;
+  border: none;
+  background: transparent;
+  color: var(--brand, #22c55e);
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.btn-volver-perfil:hover {
+  text-decoration: underline;
 }
 .perfil-card {
   background: white;
@@ -854,6 +917,11 @@ onMounted(cargarPerfil)
   font-size: 0.875rem;
   margin: 8px 0 0 0;
 }
+.campo-obligatorio { color: #dc2626; }
+.resena-input-error { border-color: #dc2626 !important; }
+.resena-stars-error .star-btn { outline: 2px solid #fecaca; border-radius: 4px; }
+.resena-campo-error { color: #dc2626; font-size: 0.8125rem; margin: 4px 0 0 0; }
+.resena-comentario-label { display: block; margin-bottom: 6px; }
 .resena-aviso {
   font-size: 0.9375rem;
   color: #64748b;

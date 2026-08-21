@@ -8,8 +8,17 @@
         class="step-indicator"
         :class="{ 
           'active': currentStep === index + 1,
-          'completed': currentStep > index + 1
+          'completed': currentStep > index + 1,
+          'step-nav-allowed': allowStepNavigation && isStepNavigable(index + 1),
+          'step-nav-locked': allowStepNavigation && !isStepNavigable(index + 1)
         }"
+        role="button"
+        :tabindex="allowStepNavigation && isStepNavigable(index + 1) ? 0 : -1"
+        :aria-current="currentStep === index + 1 ? 'step' : undefined"
+        :aria-disabled="allowStepNavigation && !isStepNavigable(index + 1)"
+        @click="onStepIndicatorClick(index + 1)"
+        @keydown.enter.prevent="onStepIndicatorClick(index + 1)"
+        @keydown.space.prevent="onStepIndicatorClick(index + 1)"
       >
         <div class="step-number">
           <span v-if="currentStep > index + 1">✓</span>
@@ -58,7 +67,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, nextTick } from 'vue'
+import { ref, computed, nextTick, watch } from 'vue'
 
 interface Step {
   label: string
@@ -69,10 +78,13 @@ interface Props {
   canProceed?: boolean
   /** Si está definida, se llama al hacer clic en Siguiente/Finalizar. Si retorna false (o Promise<false>), no se avanza. */
   validateBeforeNext?: (step: number) => boolean | Promise<boolean>
+  /** Permite hacer clic en los pasos ya visitados para volver sin perder datos del formulario. */
+  allowStepNavigation?: boolean
 }
 
 const props = withDefaults(defineProps<Props>(), {
-  canProceed: true
+  canProceed: true,
+  allowStepNavigation: true
 })
 
 const emit = defineEmits<{
@@ -81,8 +93,27 @@ const emit = defineEmits<{
 }>()
 
 const currentStep = ref(1)
+/** Máximo paso al que el usuario ya llegó (Siguiente); permite volver a cualquier paso ≤ este sin validar. */
+const maxVisitedStep = ref(1)
 const totalSteps = computed(() => props.steps.length)
 const wizardRootRef = ref<HTMLElement | null>(null)
+
+watch(currentStep, (step) => {
+  if (step > maxVisitedStep.value) {
+    maxVisitedStep.value = step
+  }
+}, { immediate: true })
+
+function isStepNavigable (stepNumber: number): boolean {
+  if (!props.allowStepNavigation) return false
+  return stepNumber >= 1 && stepNumber <= maxVisitedStep.value
+}
+
+function onStepIndicatorClick (targetStep: number) {
+  if (!props.allowStepNavigation) return
+  if (!isStepNavigable(targetStep)) return
+  goToStep(targetStep)
+}
 
 function scrollToStepTop () {
   nextTick(() => {
@@ -212,6 +243,25 @@ defineExpose({
 
 .step-indicator.completed .step-label {
   color: #22c55e;
+}
+
+.step-indicator.step-nav-allowed {
+  cursor: pointer;
+}
+
+.step-indicator.step-nav-allowed:hover .step-label {
+  text-decoration: underline;
+  color: #0f172a;
+}
+
+.step-indicator.step-nav-allowed:hover .step-number {
+  border-color: var(--brand, #22c55e);
+  box-shadow: 0 0 0 2px rgba(34, 197, 94, 0.25);
+}
+
+.step-indicator.step-nav-locked {
+  cursor: not-allowed;
+  opacity: 0.55;
 }
 
 .wizard-content {

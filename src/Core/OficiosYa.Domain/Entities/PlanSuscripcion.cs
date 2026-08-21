@@ -9,7 +9,7 @@ namespace OficiosYa.Domain.Entities
 
         [Required]
         [StringLength(50)]
-        public string Nombre { get; set; } = string.Empty; // "Basica", "Premium", "Pro"
+        public string Nombre { get; set; } = string.Empty; // "Basico", "Premium", "Pro"
 
         [StringLength(500)]
         public string? Descripcion { get; set; }
@@ -33,6 +33,8 @@ namespace OficiosYa.Domain.Entities
         public bool Activo { get; set; } = true;
 
         public DateTime FechaCreacion { get; set; } = DateTime.UtcNow;
+
+        public virtual ICollection<Suscripcion> Suscripciones { get; set; } = new List<Suscripcion>();
 
         // Métodos de dominio
         public decimal CalcularPrecio(int meses)
@@ -58,6 +60,10 @@ namespace OficiosYa.Domain.Entities
             };
         }
 
+        /// <summary>
+        /// Aplica el % de descuento sobre el precio del período. Solo usar si PrecioTrimestral/Semestral/Anual
+        /// guardan el precio *sin* descontar; en este proyecto los montos en BD suelen ser ya finales — usá <see cref="CalcularPrecio"/>.
+        /// </summary>
         public decimal CalcularPrecioConDescuento(int meses)
         {
             var precioBase = CalcularPrecio(meses);

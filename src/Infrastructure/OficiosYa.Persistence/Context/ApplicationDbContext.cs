@@ -11,8 +11,6 @@ namespace OficiosYa.Persistence.Context
 
         public DbSet<Usuario> Usuarios { get; set; }
         public DbSet<Profesional> Profesionales { get; set; }
-        public DbSet<Oficio> Oficios { get; set; }
-        public DbSet<ProfesionalOficio> ProfesionalOficios { get; set; }
         public DbSet<TipoServicio> TipoServicios { get; set; }
         public DbSet<CategoriaServicio> CategoriaServicios { get; set; }
         public DbSet<ProfesionalCategoria> ProfesionalCategorias { get; set; }
@@ -25,6 +23,7 @@ namespace OficiosYa.Persistence.Context
         public DbSet<TrabajoPublicado> TrabajosPublicados { get; set; }
         public DbSet<TrabajoCategoria> TrabajoCategorias { get; set; }
         public DbSet<ContactoProfesional> ContactosProfesional { get; set; }
+        public DbSet<PasswordResetToken> PasswordResetTokens { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -41,6 +40,18 @@ namespace OficiosYa.Persistence.Context
                 entity.Property(e => e.PasswordHash).IsRequired().HasMaxLength(255);
             });
 
+            modelBuilder.Entity<PasswordResetToken>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.TokenHash).IsRequired().HasMaxLength(64);
+                entity.HasIndex(e => e.TokenHash);
+                entity.HasIndex(e => e.UsuarioId);
+                entity.HasOne(e => e.Usuario)
+                      .WithMany()
+                      .HasForeignKey(e => e.UsuarioId)
+                      .OnDelete(DeleteBehavior.Cascade);
+            });
+
             // Configuraci?n de Profesional
             modelBuilder.Entity<Profesional>(entity =>
             {
@@ -50,28 +61,6 @@ namespace OficiosYa.Persistence.Context
                       .WithMany(u => u.Profesionales)
                       .HasForeignKey(e => e.UsuarioId)
                       .OnDelete(DeleteBehavior.Cascade);
-            });
-
-            // Configuraci?n de Oficio
-            modelBuilder.Entity<Oficio>(entity =>
-            {
-                entity.HasKey(e => e.Id);
-                entity.Property(e => e.Nombre).IsRequired().HasMaxLength(100);
-            });
-
-            // Configuraci?n de ProfesionalOficio (tabla intermedia)
-            modelBuilder.Entity<ProfesionalOficio>(entity =>
-            {
-                entity.HasKey(e => e.Id);
-                entity.Property(e => e.PrecioHora).HasColumnType("decimal(10,2)");
-                entity.HasOne(e => e.Profesional)
-                      .WithMany(p => p.ProfesionalOficios)
-                      .HasForeignKey(e => e.ProfesionalId)
-                      .OnDelete(DeleteBehavior.Cascade);
-                entity.HasOne(e => e.Oficio)
-                      .WithMany(o => o.ProfesionalOficios)
-                      .HasForeignKey(e => e.OficioId)
-                      .OnDelete(DeleteBehavior.Restrict);
             });
 
             // Configuración de Resena (UsuarioId opcional para reseñas de visitantes)
@@ -172,6 +161,11 @@ namespace OficiosYa.Persistence.Context
                       .WithMany(p => p.Suscripciones)
                       .HasForeignKey(e => e.ProfesionalId)
                       .OnDelete(DeleteBehavior.Cascade);
+                entity.HasOne(e => e.PlanSuscripcion)
+                      .WithMany(p => p.Suscripciones)
+                      .HasForeignKey(e => e.PlanSuscripcionId)
+                      .IsRequired(false)
+                      .OnDelete(DeleteBehavior.Restrict);
             });
 
             // Configuraci?n de PlanSuscripcion
@@ -251,16 +245,6 @@ namespace OficiosYa.Persistence.Context
             modelBuilder.Entity<TipoServicio>().HasData(
                 new TipoServicio { Id = 1, Nombre = "Oficiante", Descripcion = "Servicios de oficios y trabajos manuales", Activo = true, FechaCreacion = new DateTime(2024, 1, 1) },
                 new TipoServicio { Id = 2, Nombre = "Profesional", Descripcion = "Servicios profesionales y especializados", Activo = true, FechaCreacion = new DateTime(2024, 1, 1) }
-            );
-
-            // Oficios iniciales
-            modelBuilder.Entity<Oficio>().HasData(
-                new Oficio { Id = 1, Nombre = "Plomería", Descripcion = "Reparación y mantenimiento de sistemas de plomería", Icono = "🚰", Color = "#3498db", FechaCreacion = new DateTime(2024, 1, 1) },
-                new Oficio { Id = 2, Nombre = "Electricidad", Descripcion = "Instalaciones y reparaciones eléctricas", Icono = "⚡", Color = "#f39c12", FechaCreacion = new DateTime(2024, 1, 1) },
-                new Oficio { Id = 3, Nombre = "Carpintería", Descripcion = "Trabajos en madera y muebles", Icono = "🪵", Color = "#8e44ad", FechaCreacion = new DateTime(2024, 1, 1) },
-                new Oficio { Id = 4, Nombre = "Pintura", Descripcion = "Pintura de interiores y exteriores", Icono = "🎨", Color = "#e74c3c", FechaCreacion = new DateTime(2024, 1, 1) },
-                new Oficio { Id = 5, Nombre = "Jardinería", Descripcion = "Mantenimiento de jardines y espacios verdes", Icono = "🌿", Color = "#27ae60", FechaCreacion = new DateTime(2024, 1, 1) },
-                new Oficio { Id = 6, Nombre = "Limpieza", Descripcion = "Servicios de limpieza doméstica y comercial", Icono = "🧹", Color = "#16a085", FechaCreacion = new DateTime(2024, 1, 1) }
             );
 
             // Categorías de Servicio - Oficiantes (TipoServicioId = 1)
@@ -347,15 +331,15 @@ namespace OficiosYa.Persistence.Context
                 new PlanSuscripcion 
                 { 
                     Id = 1, 
-                    Nombre = "Basica", 
-                    Descripcion = "Plan básico para profesionales y oficiantes",
-                    PrecioMensual = 5000m,
-                    PrecioTrimestral = 13500m, // 10% descuento
-                    PrecioSemestral = 24000m, // 20% descuento
-                    PrecioAnual = 42000m, // 30% descuento
+                    Nombre = "Basico",
+                    Descripcion = "20 contactos por mes. Ver empleos publicados (sin postularse).",
+                    PrecioMensual = 6900m,
+                    PrecioTrimestral = 18630m, // 10% descuento
+                    PrecioSemestral = 35190m, // 15% descuento
+                    PrecioAnual = 66240m, // 20% descuento
                     DescuentoTrimestral = 10m,
-                    DescuentoSemestral = 20m,
-                    DescuentoAnual = 30m,
+                    DescuentoSemestral = 15m,
+                    DescuentoAnual = 20m,
                     Activo = true,
                     FechaCreacion = new DateTime(2024, 1, 1)
                 },
@@ -363,14 +347,14 @@ namespace OficiosYa.Persistence.Context
                 { 
                     Id = 2, 
                     Nombre = "Premium", 
-                    Descripcion = "Plan premium con más visibilidad y funciones",
-                    PrecioMensual = 8000m,
-                    PrecioTrimestral = 21600m, // 10% descuento
-                    PrecioSemestral = 38400m, // 20% descuento
-                    PrecioAnual = 67200m, // 30% descuento
+                    Descripcion = "Todo ilimitado: contactos y postulaciones a empleos.",
+                    PrecioMensual = 17900m,
+                    PrecioTrimestral = 48330m, // 10% descuento
+                    PrecioSemestral = 91290m, // 15% descuento
+                    PrecioAnual = 171840m, // 20% descuento
                     DescuentoTrimestral = 10m,
-                    DescuentoSemestral = 20m,
-                    DescuentoAnual = 30m,
+                    DescuentoSemestral = 15m,
+                    DescuentoAnual = 20m,
                     Activo = true,
                     FechaCreacion = new DateTime(2024, 1, 1)
                 },
@@ -378,14 +362,14 @@ namespace OficiosYa.Persistence.Context
                 { 
                     Id = 3, 
                     Nombre = "Pro", 
-                    Descripcion = "Plan profesional con todas las funciones",
-                    PrecioMensual = 12000m,
-                    PrecioTrimestral = 32400m, // 10% descuento
-                    PrecioSemestral = 57600m, // 20% descuento
-                    PrecioAnual = 100800m, // 30% descuento
+                    Descripcion = "Contactos ilimitados y hasta 5 postulaciones por período.",
+                    PrecioMensual = 11900m,
+                    PrecioTrimestral = 32130m, // 10% descuento
+                    PrecioSemestral = 60690m, // 15% descuento
+                    PrecioAnual = 114240m, // 20% descuento
                     DescuentoTrimestral = 10m,
-                    DescuentoSemestral = 20m,
-                    DescuentoAnual = 30m,
+                    DescuentoSemestral = 15m,
+                    DescuentoAnual = 20m,
                     Activo = true,
                     FechaCreacion = new DateTime(2024, 1, 1)
                 }

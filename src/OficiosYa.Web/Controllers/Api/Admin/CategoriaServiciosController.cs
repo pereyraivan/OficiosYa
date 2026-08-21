@@ -101,12 +101,13 @@ namespace OficiosYa.Web.Controllers.Api.Admin
                 return Unauthorized(new { message = "No autorizado" });
             }
 
+            request.Id = id;
+
             if (!ModelState.IsValid)
             {
                 return BadRequest(ModelState);
             }
 
-            request.Id = id;
             var command = new ActualizarCategoriaServicioCommand { Request = request };
             var categoria = await _mediator.Send(command);
 

@@ -4,11 +4,9 @@ namespace OficiosYa.Domain.Interfaces
 {
     public interface IProfesionalRepository : IRepository<Profesional>
     {
-        Task<IEnumerable<Profesional>> GetByOficioAsync(int oficioId);
         Task<IEnumerable<Profesional>> GetByCategoriaAsync(int categoriaId);
         Task<IEnumerable<Profesional>> GetDisponiblesAsync();
-        Task<IEnumerable<Profesional>> BuscarAsync(string? termino, int? oficioId, int? categoriaId, decimal? precioMin, decimal? precioMax, string? localidad, string? provincia);
-        Task<Profesional?> GetWithOficiosAsync(int id);
+        Task<IEnumerable<Profesional>> BuscarAsync(string? termino, int? categoriaId, string? localidad, string? provincia);
         Task<Profesional?> GetWithCategoriasAsync(int id);
         Task<Profesional?> GetWithResenasAsync(int id);
         Task<Profesional?> GetByUsuarioIdAsync(int usuarioId);

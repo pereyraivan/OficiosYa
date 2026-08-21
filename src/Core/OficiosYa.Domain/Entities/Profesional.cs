@@ -28,7 +28,6 @@ namespace OficiosYa.Domain.Entities
         // Navegación
         public virtual Usuario Usuario { get; set; } = null!;
 
-        public virtual ICollection<ProfesionalOficio> ProfesionalOficios { get; set; } = new List<ProfesionalOficio>();
         public virtual ICollection<ProfesionalCategoria> ProfesionalCategorias { get; set; } = new List<ProfesionalCategoria>();
         public virtual ICollection<Resena> Resenas { get; set; } = new List<Resena>();
         public virtual ICollection<Certificado> Certificados { get; set; } = new List<Certificado>();

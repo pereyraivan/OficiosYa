@@ -52,6 +52,9 @@ namespace OficiosYa.Application.DTOs.Request
         [StringLength(100, ErrorMessage = "El código de pago no puede exceder 100 caracteres")]
         public string? CodigoPago { get; set; } // Para Rapipago/Pagos Fáciles
 
+        [StringLength(50, ErrorMessage = "El plan seleccionado no puede exceder 50 caracteres")]
+        public string? PlanSeleccionado { get; set; } // Free | Basica/Basico | Pro | Premium
+
         public int? MesesSuscripcion { get; set; } = 1; // Cantidad de meses de suscripción
 
         /// <summary>Opcional. Foto de perfil en base64 (data:image/...;base64,...).</summary>

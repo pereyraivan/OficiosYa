@@ -23,8 +23,8 @@
             </button>
           </template>
           <template v-else-if="authStore.estaAutenticado && puedePostularEmpleos === false">
-            <p class="mensaje-plan">Para postularte a empleos necesitás plan <strong>Premium</strong>.</p>
-            <router-link to="/planes" class="btn-postularme btn-planes">Ver planes Premium</router-link>
+            <p class="mensaje-plan">Para postularte a empleos necesitás plan <strong>Pro o Premium</strong>.</p>
+            <router-link to="/planes" class="btn-postularme btn-planes">Ver planes</router-link>
           </template>
           <template v-else-if="!authStore.estaAutenticado">
             <p class="mensaje-plan">Iniciá sesión como profesional u oficiante para postularte.</p>
@@ -92,7 +92,7 @@ const cargando = ref(true)
 const error = ref('')
 const mostrarModal = ref(false)
 const postulacion = reactive({ descripcion: '', monto: '' })
-/** true = puede postular (Premium), false = no (Free/Básica), null = no cargado o no es profesional */
+/** true = puede postular (Pro/Premium), false = no (Free/Básico), null = no cargado o no es profesional */
 const puedePostularEmpleos = ref<boolean | null>(null)
 
 const INTRO_OFICIOSYA = 'Te contacto desde la página OficiosYa, me postulo al trabajo que publicaste.'
@@ -201,7 +201,7 @@ async function cargar () {
   } finally {
     cargando.value = false
   }
-  // Si está logueado, verificar si puede postularse (solo plan Premium)
+  // Si está logueado, verificar si puede postularse (Pro/Premium).
   if (authStore.estaAutenticado) {
     try {
       const r = await profesionalService.yoPuedoPostularEmpleos()

@@ -232,7 +232,12 @@
 
                 <!-- Selección de Oficios/Categorías -->
                 <div v-if="tipoServicio" class="form-group">
-                  <label>Servicios que ofrecés *</label>
+                  <label class="label-oficios">
+                    <span>Servicios que ofrecés *</span>
+                    <span v-if="formulario?.oficios?.length" class="oficios-seleccionados-inline">
+                      {{ formulario.oficios.join(', ') }}
+                    </span>
+                  </label>
                   <div v-if="cargandoCategorias" style="padding: 20px; text-align: center;">
                     <span class="small">Cargando categorías...</span>
                   </div>
@@ -321,8 +326,21 @@
                     v-model="formulario.zonasCobertura"
                     :provincia="formulario.provincia"
                     :show-map="false"
-                    :max-zonas="1"
+                    :max-zonas="maxZonasCoberturaActual"
                   />
+                  <p
+                    v-if="!restriccionZonasPorPlanActiva"
+                    class="aviso-zonas-free"
+                  >
+                    Si al final elegís el plan <strong>Free</strong>, solo vas a poder mantener <strong>1</strong> zona de cobertura.
+                    Podés seleccionar varias ahora y luego ajustar.
+                  </p>
+                  <p
+                    v-else-if="restriccionZonasPorPlanActiva && mensajeFreeZonas"
+                    class="aviso-zonas-free"
+                  >
+                    {{ mensajeFreeZonas }}
+                  </p>
                 </div>
 
                 <!-- Descripción Profesional -->
@@ -419,7 +437,7 @@
                     >
                       <div class="plan-header">
                         <h4>{{ plan.nombre }}</h4>
-                        <div class="plan-badge" v-if="plan.nombre === 'Premium'">⭐ Popular</div>
+                        <div class="plan-badge" v-if="normalizeText(plan.nombre) === 'pro'">⭐ Más elegido</div>
                       </div>
                       <p class="plan-descripcion">{{ plan.descripcion }}</p>
                       <div class="plan-precio">
@@ -457,84 +475,43 @@
                 </div>
                 <span v-if="errores.plan" class="error">{{ errores.plan }}</span>
 
+                <div
+                  v-if="mensajeFreeZonas"
+                  class="error error-general-box"
+                  style="margin: 12px 0 16px 0; text-align: center;"
+                >
+                  {{ mensajeFreeZonas }}
+                </div>
+
                 <p style="color: #64748b; margin-bottom: 24px; text-align: center;">
-                  Seleccioná tu método de pago preferido
+                  Los planes de pago se abonan por <strong>transferencia</strong> (MISMO / CVU o alias).
                 </p>
 
-                <div class="payment-methods"
-                     :class="{ 'error-border': errores.metodoPago }"
+                <div
+                  v-if="metodoPagoSeleccionado === 'transferencia'"
+                  class="payment-methods"
+                  :class="{ 'error-border': errores.metodoPago }"
                 >
-                  <div 
-                    v-for="metodo in metodosPago" 
-                    :key="metodo.id"
-                    class="payment-method"
-                    :class="{ 'selected': metodoPagoSeleccionado === metodo.id }"
-                    @click="seleccionarMetodoPago(metodo.id)"
-                  >
-                    <div class="payment-icon">{{ metodo.icono }}</div>
+                  <div class="payment-method selected" style="cursor: default;">
+                    <div class="payment-icon">🏦</div>
                     <div class="payment-info">
-                      <h4>{{ metodo.nombre }}</h4>
-                      <p>{{ metodo.descripcion }}</p>
+                      <h4>Transferencia bancaria o billetera</h4>
+                      <p>Al finalizar el registro te mostraremos el <strong>código único</strong> para el concepto y los CVU/alias donde transferir.</p>
                     </div>
-                    <div class="payment-check">
-                      <span v-if="metodoPagoSeleccionado === metodo.id">✓</span>
-                    </div>
+                    <div class="payment-check"><span>✓</span></div>
                   </div>
                 </div>
                 <span v-if="errores.metodoPago" class="error">{{ errores.metodoPago }}</span>
 
-                <!-- Cupón de Pago (para Rapipago/Pagos Fáciles) -->
-                <div v-if="metodoPagoSeleccionado === 'rapipago' || metodoPagoSeleccionado === 'pagosfaciles'" class="payment-coupon">
-                  <div class="coupon-container">
-                    <div class="coupon-header">
-                      <h4>📄 Cupón de Pago</h4>
-                      <p>Presentá este cupón en cualquier sucursal de {{ metodoPagoSeleccionado === 'rapipago' ? 'Rapipago' : 'Pagos Fáciles' }}</p>
-                    </div>
-                    <div class="coupon-content">
-                      <div class="coupon-field">
-                        <span class="coupon-label">Código de Pago:</span>
-                        <span class="coupon-value">{{ codigoPago }}</span>
-                      </div>
-                      <div class="coupon-field">
-                        <span class="coupon-label">Monto:</span>
-                        <span class="coupon-value">${{ montoPago.toFixed(2) }}</span>
-                      </div>
-                      <div class="coupon-field">
-                        <span class="coupon-label">Vencimiento:</span>
-                        <span class="coupon-value">{{ fechaVencimiento }}</span>
-                      </div>
-                    </div>
-                    <button type="button" class="btn-print" @click="imprimirCupon">
-                      🖨️ Imprimir Cupón
-                    </button>
-                  </div>
-                </div>
-
-                <!-- Información de Transferencia -->
                 <div v-if="metodoPagoSeleccionado === 'transferencia'" class="payment-info">
                   <div class="info-box">
-                    <h4>💳 Datos para Transferencia</h4>
+                    <h4>💳 Cómo sigue</h4>
                     <div class="info-content">
-                      <p><strong>CBU:</strong> 1234567890123456789012</p>
-                      <p><strong>Alias:</strong> OFICIOSYA.SUSCRIPCION</p>
-                      <p><strong>Razón Social:</strong> OficiosYa S.A.</p>
-                      <p><strong>Monto:</strong> ${{ montoPago.toFixed(2) }}</p>
+                      <p><strong>Monto a transferir (estimado):</strong> ${{ montoPago.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) }}</p>
                       <p style="margin-top: 12px; color: #64748b; font-size: 0.9rem;">
-                        Una vez realizada la transferencia, enviá el comprobante a pagos@oficiosya.com
+                        El monto y el código <strong>OY-…</strong> definitivos te los damos al confirmar el registro, para que coincida con tu suscripción en el sistema.
                       </p>
                     </div>
-                  </div>
-                </div>
-
-                <!-- Información de Tarjeta -->
-                <div v-if="metodoPagoSeleccionado === 'tarjeta'" class="payment-info">
-                  <div class="info-box">
-                    <p style="color: #64748b; text-align: center;">
-                      El pago con tarjeta de crédito será procesado de forma segura en el siguiente paso.
-                    </p>
-                    <p style="color: #64748b; text-align: center; margin-top: 12px;">
-                      <strong>Monto:</strong> ${{ montoPago.toFixed(2) }}
-                    </p>
                   </div>
                 </div>
 
@@ -608,6 +585,53 @@
         </div>
       </div>
     </section>
+
+    <!-- Instrucciones de pago por transferencia (código OY- y CVU/alias) tras registro exitoso -->
+    <div
+      v-if="modalTransferenciaAbierto && instruccionesTransferencia"
+      class="modal-pago-overlay"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="modal-pago-titulo"
+    >
+      <div class="modal-pago-card">
+        <h3 id="modal-pago-titulo" class="modal-pago-titulo">Pagá tu suscripción por transferencia</h3>
+        <p class="modal-pago-intro">
+          Tu cuenta ya está creada. La suscripción queda <strong>pendiente</strong> hasta que acreditemos el pago en nuestras cuentas.
+        </p>
+        <div class="modal-pago-bloque">
+          <span class="modal-pago-label">Código para el concepto</span>
+          <div class="modal-pago-fila">
+            <code class="modal-pago-codigo">{{ instruccionesTransferencia.codigoReferencia }}</code>
+            <button type="button" class="btn-modal-copiar" @click="copiarAlPortapapeles(instruccionesTransferencia.codigoReferencia)">Copiar</button>
+          </div>
+          <p class="modal-pago-hint">{{ instruccionesTransferencia.mensajeConcepto }}</p>
+        </div>
+        <div class="modal-pago-bloque">
+          <span class="modal-pago-label">Monto exacto</span>
+          <p class="modal-pago-monto">${{ instruccionesTransferencia.montoArs.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) }}</p>
+        </div>
+        <div v-if="instruccionesTransferencia.cuentas?.length" class="modal-pago-cuentas">
+          <span class="modal-pago-label">Podés transferir a cualquiera de estas cuentas</span>
+          <div
+            v-for="(c, idx) in instruccionesTransferencia.cuentas"
+            :key="idx"
+            class="modal-pago-cuenta"
+          >
+            <strong>{{ c.etiqueta }}</strong>
+            <div v-if="c.titular" class="modal-pago-detalle">Titular: {{ c.titular }}</div>
+            <div class="modal-pago-fila">
+              <code class="modal-pago-cvu">{{ c.cvuAlias }}</code>
+              <button type="button" class="btn-modal-copiar" @click="copiarAlPortapapeles(c.cvuAlias)">Copiar</button>
+            </div>
+          </div>
+        </div>
+        <p v-else class="modal-pago-aviso-config">
+          El administrador aún no cargó los CVU/alias en el servidor. Guardá el código de referencia; cuando tengas los datos de pago, transferí el monto indicado con ese código en el concepto.
+        </p>
+        <button type="button" class="btn-modal-ok" @click="cerrarModalTransferenciaIrHome">Entendido, ir al inicio</button>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -620,7 +644,7 @@ import { PROVINCIAS_ARGENTINA, MESSAGES, ROUTES } from '../utils/constants'
 import CiudadAutocomplete from '../components/CiudadAutocomplete.vue'
 import MapaZonasCobertura from '../components/MapaZonasCobertura.vue'
 import Wizard from '../components/Wizard.vue'
-import type { CategoriaServicio } from '../types'
+import type { CategoriaServicio, InstruccionesPagoTransferencia } from '../types'
 import type { CiudadSugerida } from '../services/geocodingService'
 
 const router = useRouter()
@@ -647,42 +671,17 @@ const isDragging = ref(false)
 const categoriasCargadas = ref<CategoriaServicio[]>([])
 const cargandoCategorias = ref(false)
 const currentStep = ref(1)
+// Se activa cuando entrás al paso de "Pago" (paso 3), porque el plan es lo último.
+// Antes de eso, dejamos seleccionar varias zonas aunque el plan tenga un valor por defecto.
+const restriccionZonasPorPlanActiva = ref(false)
 const fileInput = ref<HTMLInputElement | null>(null)
 const busquedaServicios = ref('')
 const errorGeneralRef = ref<HTMLElement | null>(null)
 
-// Métodos de pago
-const metodosPago = [
-  {
-    id: 'transferencia',
-    nombre: 'Transferencia Bancaria',
-    descripcion: 'Transferí desde tu banco',
-    icono: '🏦'
-  },
-  {
-    id: 'tarjeta',
-    nombre: 'Tarjeta de Crédito',
-    descripcion: 'Visa, Mastercard, Amex',
-    icono: '💳'
-  },
-  {
-    id: 'rapipago',
-    nombre: 'Rapipago',
-    descripcion: 'Pagá en cualquier sucursal',
-    icono: '🏪'
-  },
-  {
-    id: 'pagosfaciles',
-    nombre: 'Pagos Fáciles',
-    descripcion: 'Pagá en cualquier sucursal',
-    icono: '🏬'
-  }
-]
-
 const metodoPagoSeleccionado = ref<string | null>(null)
 const montoPago = ref(5000) // Se calculará dinámicamente
-const codigoPago = ref('')
-const fechaVencimiento = ref('')
+const modalTransferenciaAbierto = ref(false)
+const instruccionesTransferencia = ref<InstruccionesPagoTransferencia | null>(null)
 const planesDisponibles = ref<any[]>([])
 const cargandoPlanes = ref(false)
 const planSeleccionado = ref<any>(null)
@@ -700,22 +699,6 @@ const opcionesDuracion = computed(() => {
   ]
 })
 
-// Generar código de pago único
-const generarCodigoPago = () => {
-  const timestamp = Date.now()
-  const random = Math.floor(Math.random() * 10000)
-  codigoPago.value = `OFY-${timestamp}-${random.toString().padStart(4, '0')}`
-  
-  // Fecha de vencimiento: 7 días desde hoy
-  const fecha = new Date()
-  fecha.setDate(fecha.getDate() + 7)
-  fechaVencimiento.value = fecha.toLocaleDateString('es-AR', { 
-    year: 'numeric', 
-    month: 'long', 
-    day: 'numeric' 
-  })
-}
-
 // Foto de perfil (opcional, paso 1)
 const fotoPerfilBase64 = ref<string | null>(null)
 const fileInputFotoPerfil = ref<HTMLInputElement | null>(null)
@@ -732,6 +715,7 @@ const wizardSteps = [
 ]
 
 const MENSAJE_OBLIGATORIO = 'Campo obligatorio'
+const MENSAJE_ZONAS_FREE = 'Con el plan Free solo podés tener 1 zona de cobertura. Eliminá las demás o seleccioná otro plan.'
 
 /** Valida el paso actual al intentar avanzar. Marca en rojo los campos vacíos y retorna false si hay errores. */
 function validarPasoActual (step: number): boolean {
@@ -770,7 +754,21 @@ function validarPasoActual (step: number): boolean {
     } else {
       setError('plan', '')
     }
-    if (!metodoPagoSeleccionado.value) {
+
+    // Restricción de zonas: si el plan es Free, solo se permite 1 zona.
+    // El plan se elige al final del wizard, por eso recién se valida acá.
+    const planNormalizado = normalizeText((planSeleccionado.value?.nombre ?? '').toString())
+    const zonasCount = Array.isArray(formulario?.zonasCobertura) ? formulario.zonasCobertura.length : 0
+    if (planNormalizado === 'free' && zonasCount > 1) {
+      // La UI ya muestra el mensaje en el paso 3; acá solo bloqueamos avanzar.
+      setError('general', '')
+      valido = false
+    } else {
+      // Limpiar error si ya no aplica
+      setError('general', '')
+    }
+
+    if (planNormalizado !== 'free' && !metodoPagoSeleccionado.value) {
       setError('metodoPago', 'Seleccioná un método de pago.')
       valido = false
     } else {
@@ -795,6 +793,22 @@ const normalizeText = (text: string): string => {
     .replace(/[\u0300-\u036f]/g, '') // Remover diacríticos
     .trim()
 }
+
+const maxZonasCoberturaActual = computed(() => {
+  // Antes de entrar al paso 3 (Pago) no imponemos límites por plan.
+  if (!restriccionZonasPorPlanActiva.value) return 99999
+  if (!planSeleccionado.value) return 99999
+  const planNormalizado = normalizeText(planSeleccionado.value?.nombre ?? '')
+  return planNormalizado === 'free' ? 1 : 99999
+})
+
+const mensajeFreeZonas = computed(() => {
+  if (!planSeleccionado.value) return ''
+  const planNormalizado = normalizeText(planSeleccionado.value?.nombre ?? '')
+  const zonasCount = Array.isArray(formulario?.zonasCobertura) ? formulario.zonasCobertura.length : 0
+  if (planNormalizado === 'free' && zonasCount > 1) return MENSAJE_ZONAS_FREE
+  return ''
+})
 
 // Computed para categorías disponibles según el tipo seleccionado
 const categoriasDisponibles = computed(() => {
@@ -883,10 +897,13 @@ const cargarCategorias = async (tipo?: 'Oficiante' | 'Profesional') => {
 // Cargar planes al montar el componente (no cargar categorías hasta que se seleccione un tipo)
 onMounted(async () => {
   await cargarPlanes()
-  generarCodigoPago()
   // Seleccionar plan básico por defecto
   if (planesDisponibles.value.length > 0) {
-    seleccionarPlan(planesDisponibles.value[0])
+    const planBasico = planesDisponibles.value.find((p: any) => {
+      const n = normalizeText(p?.nombre ?? '')
+      return n === 'basica' || n === 'basico'
+    })
+    seleccionarPlan(planBasico || planesDisponibles.value[0])
   }
 })
 
@@ -895,7 +912,10 @@ const cargarPlanes = async () => {
   cargandoPlanes.value = true
   try {
     const planes = await profesionalService.obtenerPlanesSuscripcion()
-    planesDisponibles.value = planes || []
+    const order: Record<string, number> = { free: 0, basica: 1, basico: 1, pro: 2, premium: 3 }
+    planesDisponibles.value = (planes || []).sort((a: any, b: any) =>
+      (order[normalizeText(a?.nombre ?? '')] ?? 99) - (order[normalizeText(b?.nombre ?? '')] ?? 99)
+    )
     
     // Si no hay planes, mostrar mensaje pero no bloquear el formulario
     if (planesDisponibles.value.length === 0) {
@@ -920,6 +940,8 @@ const cargarPlanes = async () => {
 const seleccionarPlan = (plan: any) => {
   planSeleccionado.value = plan
   mesesSuscripcion.value = 1 // Resetear a 1 mes cuando cambia el plan
+  const n = normalizeText(plan?.nombre ?? '')
+  metodoPagoSeleccionado.value = n === 'free' ? null : 'transferencia'
   actualizarMontoPago()
 }
 
@@ -1028,13 +1050,8 @@ const onCiudadSeleccionada = (ciudad: CiudadSugerida) => {
 
 const onStepChange = (step: number) => {
   currentStep.value = step
-}
-
-const seleccionarMetodoPago = (metodoId: string) => {
-  metodoPagoSeleccionado.value = metodoId
-  if (metodoId === 'rapipago' || metodoId === 'pagosfaciles') {
-    generarCodigoPago()
-  }
+  // Al volver a pasos 1–2 no forzar límite de zonas por plan hasta que vuelva a “Pago”.
+  restriccionZonasPorPlanActiva.value = step >= 3
 }
 
 // Watcher para actualizar monto cuando cambia la duración
@@ -1042,8 +1059,19 @@ watch([planSeleccionado, mesesSuscripcion], () => {
   actualizarMontoPago()
 })
 
-const imprimirCupon = () => {
-  window.print()
+async function copiarAlPortapapeles (texto: string) {
+  try {
+    await navigator.clipboard.writeText(texto)
+    alert('Copiado al portapapeles.')
+  } catch {
+    alert('No se pudo copiar. Seleccioná el texto manualmente.')
+  }
+}
+
+function cerrarModalTransferenciaIrHome () {
+  modalTransferenciaAbierto.value = false
+  instruccionesTransferencia.value = null
+  router.push(ROUTES.HOME)
 }
 
 const registrarProfesional = async () => {
@@ -1057,8 +1085,11 @@ const registrarProfesional = async () => {
         return
       }
 
+      const nombrePlanNormalizado = normalizeText(planSeleccionado.value?.nombre ?? '')
+      const requierePago = nombrePlanNormalizado !== 'free'
+
       // Validar método de pago
-      if (!metodoPagoSeleccionado.value) {
+      if (requierePago && !metodoPagoSeleccionado.value) {
         setError('general', 'Debes seleccionar un método de pago')
         return
       }
@@ -1086,20 +1117,23 @@ const registrarProfesional = async () => {
               codigoPostal: z.codigoPostal
             }))
           : undefined,
-        metodoPago: metodoPagoSeleccionado.value,
-        codigoPago: (metodoPagoSeleccionado.value === 'rapipago' || metodoPagoSeleccionado.value === 'pagosfaciles') 
-          ? codigoPago.value 
-          : undefined,
-        mesesSuscripcion: mesesSuscripcion.value,
+        planSeleccionado: planSeleccionado.value?.nombre,
+        metodoPago: requierePago ? (metodoPagoSeleccionado.value ?? 'transferencia') : undefined,
+        mesesSuscripcion: requierePago ? mesesSuscripcion.value : 1,
         fotoPerfilBase64: fotoPerfilBase64.value || undefined,
         imagenesTrabajoBase64: imagenesTrabajoBase64.value?.length ? imagenesTrabajoBase64.value : undefined
       }
 
-      await profesionalService.registrar(datosProfesional)
-      
-      // Registro exitoso
-      alert(MESSAGES.SUCCESS.PROFESSIONAL_REGISTERED)
-      router.push(ROUTES.HOME)
+      const result = await profesionalService.registrar(datosProfesional)
+      const inst = result.instruccionesTransferencia
+
+      if (inst?.codigoReferencia) {
+        instruccionesTransferencia.value = inst
+        modalTransferenciaAbierto.value = true
+      } else {
+        alert(MESSAGES.SUCCESS.PROFESSIONAL_REGISTERED)
+        router.push(ROUTES.HOME)
+      }
     } catch (error: any) {
       const errorMessage = error.response?.data?.message ||
                           error.response?.data?.error ||
@@ -1414,6 +1448,20 @@ const abrirSelectorArchivos = () => {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
   gap: 8px;
+}
+
+.label-oficios {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: baseline;
+  margin-bottom: 12px;
+}
+
+.oficios-seleccionados-inline {
+  font-size: 0.85rem;
+  color: var(--brand, #22c55e);
+  font-weight: 500;
 }
 
 .categoria-checkbox {
@@ -1803,6 +1851,18 @@ input.error, textarea.error {
   background: #fef2f2;
 }
 
+.aviso-zonas-free {
+  font-size: 0.82rem;
+  color: #b91c1c;
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  border-radius: 8px;
+  padding: 10px 12px;
+  margin: -8px 0 16px 0;
+  text-align: center;
+  line-height: 1.35;
+}
+
 /* Estilos para planes de suscripción */
 .planes-container {
   display: grid;
@@ -2016,6 +2076,146 @@ input.error, textarea.error {
   font-size: 0.85rem;
   color: #94a3b8;
   text-decoration: line-through;
+}
+
+.modal-pago-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 2000;
+  background: rgba(15, 23, 42, 0.55);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  overflow-y: auto;
+}
+
+.modal-pago-card {
+  background: #fff;
+  border-radius: 16px;
+  max-width: 480px;
+  width: 100%;
+  padding: 24px;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.2);
+}
+
+.modal-pago-titulo {
+  margin: 0 0 12px;
+  font-size: 1.25rem;
+  color: var(--text, #0f172a);
+}
+
+.modal-pago-intro {
+  margin: 0 0 20px;
+  font-size: 0.95rem;
+  color: #475569;
+  line-height: 1.45;
+}
+
+.modal-pago-bloque {
+  margin-bottom: 18px;
+}
+
+.modal-pago-label {
+  display: block;
+  font-size: 0.8rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #64748b;
+  margin-bottom: 8px;
+}
+
+.modal-pago-fila {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.modal-pago-codigo,
+.modal-pago-cvu {
+  flex: 1;
+  min-width: 0;
+  font-size: 0.95rem;
+  padding: 10px 12px;
+  background: #f1f5f9;
+  border-radius: 8px;
+  word-break: break-all;
+}
+
+.modal-pago-monto {
+  margin: 0;
+  font-size: 1.35rem;
+  font-weight: 700;
+  color: var(--brand, #059669);
+}
+
+.modal-pago-hint {
+  margin: 10px 0 0;
+  font-size: 0.85rem;
+  color: #64748b;
+  line-height: 1.4;
+}
+
+.modal-pago-cuentas {
+  margin-bottom: 20px;
+}
+
+.modal-pago-cuenta {
+  margin-top: 14px;
+  padding: 12px;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  background: #fafafa;
+}
+
+.modal-pago-detalle {
+  font-size: 0.88rem;
+  color: #475569;
+  margin: 6px 0 8px;
+}
+
+.modal-pago-aviso-config {
+  font-size: 0.88rem;
+  color: #b45309;
+  background: #fffbeb;
+  border: 1px solid #fde68a;
+  border-radius: 8px;
+  padding: 12px;
+  margin-bottom: 16px;
+}
+
+.btn-modal-copiar {
+  flex-shrink: 0;
+  padding: 8px 14px;
+  border-radius: 8px;
+  border: 1px solid #cbd5e1;
+  background: #fff;
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+
+.btn-modal-copiar:hover {
+  border-color: var(--brand, #059669);
+  color: var(--brand, #059669);
+}
+
+.btn-modal-ok {
+  width: 100%;
+  margin-top: 8px;
+  padding: 14px;
+  border: none;
+  border-radius: 10px;
+  background: var(--brand, #059669);
+  color: #fff;
+  font-weight: 600;
+  font-size: 1rem;
+  cursor: pointer;
+}
+
+.btn-modal-ok:hover {
+  filter: brightness(1.05);
 }
 
 /* Responsive */

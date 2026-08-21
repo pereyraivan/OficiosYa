@@ -5,6 +5,8 @@ using MediatR;
 using OficiosYa.Application.DTOs.Request;
 using OficiosYa.Application.UseCases.Usuarios.RegistrarUsuario;
 using OficiosYa.Application.UseCases.Usuarios.Login;
+using OficiosYa.Application.UseCases.Usuarios.OlvideContrasena;
+using OficiosYa.Application.UseCases.Usuarios.RestablecerContrasena;
 using OficiosYa.Domain.Interfaces;
 using OficiosYa.Web.Services;
 
@@ -147,6 +149,35 @@ namespace OficiosYa.Web.Controllers.Api
 
             var existe = await _usuarioRepository.EmailExistsAsync(email);
             return Ok(new { disponible = !existe });
+        }
+
+        [HttpPost("olvide-contrasena")]
+        public async Task<IActionResult> OlvideContrasena([FromBody] OlvideContrasenaRequest request)
+        {
+            if (!ModelState.IsValid)
+            {
+                return BadRequest(ModelState);
+            }
+
+            var result = await _mediator.Send(new OlvideContrasenaCommand { Request = request });
+            return Ok(new { success = result.Success, message = result.Message });
+        }
+
+        [HttpPost("restablecer-contrasena")]
+        public async Task<IActionResult> RestablecerContrasena([FromBody] RestablecerContrasenaRequest request)
+        {
+            if (!ModelState.IsValid)
+            {
+                return BadRequest(ModelState);
+            }
+
+            var result = await _mediator.Send(new RestablecerContrasenaCommand { Request = request });
+            if (!result.Success)
+            {
+                return BadRequest(new { success = false, message = result.Message });
+            }
+
+            return Ok(new { success = true, message = result.Message });
         }
     }
 }

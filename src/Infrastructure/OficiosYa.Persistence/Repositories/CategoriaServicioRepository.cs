@@ -11,11 +11,27 @@ namespace OficiosYa.Persistence.Repositories
         {
         }
 
-        public async Task<IEnumerable<CategoriaServicio>> GetByTipoAsync(string tipo)
+        public override async Task<IEnumerable<CategoriaServicio>> GetAllAsync()
         {
             return await _dbSet
                 .Include(c => c.TipoServicio)
-                .Where(c => c.TipoServicio.Nombre.ToLower() == tipo.ToLower() && c.Activo)
+                .OrderBy(c => c.TipoServicio!.Nombre)
+                .ThenBy(c => c.Nombre)
+                .ToListAsync();
+        }
+
+        public async Task<IEnumerable<CategoriaServicio>> GetByTipoAsync(string tipo, bool soloActivos = true)
+        {
+            var query = _dbSet
+                .Include(c => c.TipoServicio)
+                .Where(c => c.TipoServicio.Nombre.ToLower() == tipo.ToLower());
+
+            if (soloActivos)
+            {
+                query = query.Where(c => c.Activo);
+            }
+
+            return await query
                 .OrderBy(c => c.Nombre)
                 .ToListAsync();
         }

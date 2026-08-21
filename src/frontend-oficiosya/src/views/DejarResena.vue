@@ -21,34 +21,42 @@
 
           <div v-else-if="mostrarFormularioResena" class="resena-form">
             <div class="resena-form-campo">
-              <label for="resena-nombre">Tu nombre (cómo querés que aparezca)</label>
+              <label for="resena-nombre">
+                Tu nombre (cómo querés que aparezca)<span v-if="!authStore.estaAutenticado" class="campo-obligatorio"> *</span>
+              </label>
               <input
                 id="resena-nombre"
                 v-model="formResena.autorNombre"
                 type="text"
                 class="resena-input"
+                :class="{ 'resena-input-error': erroresResena.nombre }"
                 :placeholder="authStore.estaAutenticado ? 'Opcional: se usará tu nombre de cuenta' : 'Ej: María, Juan P., Cliente satisfecho...'"
                 maxlength="100"
+                @input="erroresResena.nombre = ''"
               />
+              <p v-if="erroresResena.nombre" class="resena-campo-error">{{ erroresResena.nombre }}</p>
             </div>
-            <div class="resena-form-stars">
-              <span class="resena-form-label">Calificación</span>
+            <div class="resena-form-stars" :class="{ 'resena-stars-error': erroresResena.calificacion }">
+              <span class="resena-form-label">Calificación <span class="campo-obligatorio">*</span></span>
               <button
                 v-for="n in 5"
                 :key="n"
                 type="button"
                 class="star-btn"
                 :class="{ active: formResena.calificacion >= n }"
-                @click="formResena.calificacion = n"
+                @click="formResena.calificacion = n; erroresResena.calificacion = ''"
                 :aria-label="`${n} estrella(s)`"
               >
                 ★
               </button>
             </div>
+            <p v-if="erroresResena.calificacion" class="resena-campo-error">{{ erroresResena.calificacion }}</p>
+            <label for="resena-comentario" class="resena-form-label resena-comentario-label">Comentario (opcional)</label>
             <textarea
+              id="resena-comentario"
               v-model="formResena.comentario"
               class="resena-textarea"
-              placeholder="Contá tu experiencia con este profesional..."
+              placeholder="Contá tu experiencia con este profesional (opcional)..."
               rows="4"
               maxlength="1000"
             />
@@ -57,7 +65,7 @@
               <button
                 type="button"
                 class="cta"
-                :disabled="!puedeEnviarResena"
+                :disabled="enviandoResena"
                 @click="enviarResena"
               >
                 {{ enviandoResena ? 'Enviando...' : 'Publicar reseña' }}
@@ -148,6 +156,7 @@ const enviado = ref(false)
 const formResena = ref({ autorNombre: '', calificacion: 0, comentario: '' })
 const enviandoResena = ref(false)
 const errorResena = ref('')
+const erroresResena = ref({ nombre: '', calificacion: '' })
 
 const terminoBusqueda = ref('')
 const resultados = ref<Profesional[]>([])
@@ -186,11 +195,22 @@ const esPropioPerfil = computed(() => {
 
 const mostrarFormularioResena = computed(() => !esPropioPerfil.value)
 
-const puedeEnviarResena = computed(() => {
-  if (enviandoResena.value || !formResena.value.comentario?.trim() || formResena.value.calificacion < 1) return false
-  if (!authStore.estaAutenticado && !formResena.value.autorNombre?.trim()) return false
-  return true
-})
+function validarFormularioResena (): boolean {
+  erroresResena.value = { nombre: '', calificacion: '' }
+  let valido = true
+
+  if (formResena.value.calificacion < 1) {
+    erroresResena.value.calificacion = 'Seleccioná una calificación con las estrellas'
+    valido = false
+  }
+
+  if (!authStore.estaAutenticado && !formResena.value.autorNombre?.trim()) {
+    erroresResena.value.nombre = 'El nombre es obligatorio'
+    valido = false
+  }
+
+  return valido
+}
 
 async function cargarPerfil() {
   const id = idProfesional.value
@@ -213,14 +233,17 @@ async function cargarPerfil() {
 
 async function enviarResena() {
   const id = idProfesional.value
-  if (!id || formResena.value.calificacion < 1 || !formResena.value.comentario?.trim()) return
-  enviandoResena.value = true
+  if (!id) return
   errorResena.value = ''
+  if (!validarFormularioResena()) return
+
+  enviandoResena.value = true
   try {
+    const comentario = formResena.value.comentario?.trim()
     await profesionalService.crearResena(id, {
       autorNombre: formResena.value.autorNombre?.trim() || undefined,
       calificacion: formResena.value.calificacion,
-      comentario: formResena.value.comentario.trim()
+      comentario: comentario || undefined
     })
     formResena.value = { autorNombre: '', calificacion: 0, comentario: '' }
     enviado.value = true
@@ -375,6 +398,11 @@ watch(idProfesional, (id) => {
 }
 .resena-chars { font-size: 0.8125rem; color: var(--muted, #64748b); }
 .resena-error { color: #dc2626; font-size: 0.875rem; margin: 8px 0 0 0; }
+.campo-obligatorio { color: #dc2626; }
+.resena-input-error { border-color: #dc2626 !important; }
+.resena-stars-error .star-btn { outline: 2px solid #fecaca; border-radius: 4px; }
+.resena-campo-error { color: #dc2626; font-size: 0.8125rem; margin: 4px 0 0 0; }
+.resena-comentario-label { display: block; margin-bottom: 6px; }
 
 /* Landing */
 .landing-hero {

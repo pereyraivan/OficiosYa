@@ -4,10 +4,14 @@ import Oficiantes from '../views/Oficiantes.vue'
 import RegistrarUsuario from '../views/RegistrarUsuario.vue'
 import RegistrarProfesional from '../views/RegistrarProfesional.vue'
 import Login from '../views/Login.vue'
+import OlvideContrasena from '../views/OlvideContrasena.vue'
+import RestablecerContrasena from '../views/RestablecerContrasena.vue'
 import TerminosCondiciones from '../views/TerminosCondiciones.vue'
 import PoliticaPrivacidad from '../views/PoliticaPrivacidad.vue'
-import GestionarOficios from '../views/admin/GestionarOficios.vue'
 import GestionarCategorias from '../views/admin/GestionarCategorias.vue'
+import GestionarSuscripciones from '../views/admin/GestionarSuscripciones.vue'
+import GestionarProfesionales from '../views/admin/GestionarProfesionales.vue'
+import AdminPanel from '../views/admin/AdminPanel.vue'
 import PerfilProfesional from '../views/PerfilProfesional.vue'
 import PublicarTrabajo from '../views/PublicarTrabajo.vue'
 import EmpleosPublicados from '../views/EmpleosPublicados.vue'
@@ -89,6 +93,16 @@ const routes = [
     component: Login
   },
   {
+    path: '/olvide-contrasena',
+    name: 'OlvideContrasena',
+    component: OlvideContrasena
+  },
+  {
+    path: '/restablecer-contrasena',
+    name: 'RestablecerContrasena',
+    component: RestablecerContrasena
+  },
+  {
     path: '/terminos-y-condiciones',
     name: 'TerminosCondiciones',
     component: TerminosCondiciones
@@ -99,15 +113,27 @@ const routes = [
     component: PoliticaPrivacidad
   },
   {
-    path: '/admin/oficios',
-    name: 'GestionarOficios',
-    component: GestionarOficios,
+    path: '/admin',
+    name: 'AdminPanel',
+    component: AdminPanel,
+    meta: { requiresAdmin: true }
+  },
+  {
+    path: '/admin/suscripciones',
+    name: 'GestionarSuscripciones',
+    component: GestionarSuscripciones,
     meta: { requiresAdmin: true }
   },
   {
     path: '/admin/categorias',
     name: 'GestionarCategorias',
     component: GestionarCategorias,
+    meta: { requiresAdmin: true }
+  },
+  {
+    path: '/admin/profesionales',
+    name: 'GestionarProfesionales',
+    component: GestionarProfesionales,
     meta: { requiresAdmin: true }
   }
 ]

@@ -44,9 +44,8 @@ namespace OficiosYa.Domain.Entities
 
         public bool EsValida()
         {
-            return Calificacion >= 1 && Calificacion <= 5 && 
-                   !string.IsNullOrWhiteSpace(Comentario) && 
-                   Comentario.Length <= 1000;
+            return Calificacion >= 1 && Calificacion <= 5 &&
+                   (string.IsNullOrWhiteSpace(Comentario) || Comentario.Length <= 1000);
         }
     }
 }

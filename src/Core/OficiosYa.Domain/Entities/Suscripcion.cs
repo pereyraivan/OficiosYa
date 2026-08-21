@@ -10,9 +10,12 @@ namespace OficiosYa.Domain.Entities
         [Required]
         public int ProfesionalId { get; set; }
 
+        /// <summary>FK a PlanesSuscripcion. Preferir este campo; TipoSuscripcion se mantiene por compatibilidad.</summary>
+        public int? PlanSuscripcionId { get; set; }
+
         [Required]
         [StringLength(50)]
-        public string TipoSuscripcion { get; set; } = string.Empty; // "Basica", "Premium", "Pro"
+        public string TipoSuscripcion { get; set; } = string.Empty; // "Basico", "Premium", "Pro"
 
         [Column(TypeName = "decimal(10,2)")]
         public decimal Precio { get; set; }
@@ -38,6 +41,8 @@ namespace OficiosYa.Domain.Entities
 
         // Navegación
         public virtual Profesional Profesional { get; set; } = null!;
+
+        public virtual PlanSuscripcion? PlanSuscripcion { get; set; }
 
         // Métodos de dominio
         public void Activar()

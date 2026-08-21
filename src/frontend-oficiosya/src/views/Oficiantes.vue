@@ -1,7 +1,11 @@
 <template>
   <div class="oficiantes">
-    <!-- Hero Section -->
-    <section class="hero" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 80px 0;">
+    <!-- Hero Section (landing inicial; oculto en resultados y al explorar categorías tras búsqueda) -->
+    <section
+      v-if="mostrarHero"
+      class="hero"
+      style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 80px 0;"
+    >
       <div class="container">
         <div style="text-align: center; max-width: 800px; margin: 0 auto;">
           <h1 style="font-size: 3rem; margin-bottom: 20px; font-weight: 700;">
@@ -23,13 +27,14 @@
     </section>
 
     <!-- Resultados de Búsqueda -->
-    <section v-if="mostrarResultados" class="section section-fondo-publicar" style="padding: 80px 0;">
+    <section v-if="mostrarResultados" class="section section-fondo-publicar section-resultados">
       <div class="container">
-        <div style="margin-bottom: 40px;">
-          <h2 style="font-size: 2rem; margin-bottom: 12px; color: var(--text);">
-            Resultados de búsqueda
-          </h2>
-          <p v-if="criteriosBusqueda.oficio || criteriosBusqueda.zona" style="color: var(--muted);">
+        <div class="resultados-header">
+          <button type="button" class="btn-volver" @click="limpiarBusqueda">
+            ← Explorar categorías
+          </button>
+          <h2 class="resultados-titulo">Resultados de búsqueda</h2>
+          <p v-if="criteriosBusqueda.oficio || criteriosBusqueda.zona" class="resultados-criterios">
             <span v-if="criteriosBusqueda.oficio">Oficio: <strong>{{ criteriosBusqueda.oficio }}</strong></span>
             <span v-if="criteriosBusqueda.oficio && criteriosBusqueda.zona"> • </span>
             <span v-if="criteriosBusqueda.zona">Zona: <strong>{{ criteriosBusqueda.zona }}</strong></span>
@@ -45,7 +50,7 @@
             No se encontraron profesionales con los criterios de búsqueda
           </div>
           <button class="cta" @click="limpiarBusqueda" style="background: var(--brand); color: white; border: none; padding: 12px 24px; border-radius: 8px; cursor: pointer;">
-            Ver todas las categorías
+            Explorar categorías
           </button>
         </div>
 
@@ -88,7 +93,7 @@
     </section>
 
     <!-- Categorías de Oficiantes -->
-    <section v-if="!mostrarResultados" class="section section-fondo-publicar" style="padding: 80px 0;">
+    <section v-if="!mostrarResultados" id="categorias-oficiantes" class="section section-fondo-publicar" style="padding: 80px 0;">
       <div class="container">
         <div style="text-align: center; margin-bottom: 60px;">
           <h2 style="font-size: 2.5rem; margin-bottom: 20px; color: var(--text);">
@@ -116,7 +121,7 @@
     </section>
 
     <!-- Cómo funciona -->
-    <section class="section" style="padding: 80px 0; background: white;">
+    <section v-if="!mostrarResultados" class="section" style="padding: 80px 0; background: white;">
       <div class="container">
         <div style="text-align: center; margin-bottom: 60px;">
           <h2 style="font-size: 2.5rem; margin-bottom: 20px; color: var(--text);">
@@ -181,7 +186,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, computed } from 'vue'
+import { ref, onMounted, computed, nextTick, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
 import { CATEGORIAS_SERVICIO } from '../utils/constants'
@@ -202,8 +207,13 @@ const criteriosBusqueda = ref({
   tipo: ''
 })
 
-// Mostrar resultados cuando ya se hizo al menos una búsqueda (lista todos o con filtros)
+// Mostrar resultados solo cuando hay criterios de búsqueda en la URL
 const mostrarResultados = computed(() => busquedaRealizada.value)
+
+// Hero: solo en landing /oficiantes sin búsqueda ni modo categorías
+const mostrarHero = computed(() =>
+  !mostrarResultados.value && route.query.vista !== 'categorias'
+)
 
 function claseEstrella (n: number, rating: number | undefined) {
   const r = Math.min(5, Math.max(0, Number(rating ?? 0)))
@@ -265,22 +275,17 @@ const cerrarSesion = () => {
   router.push('/')
 }
 
-const buscarOficiantes = () => {
-  // Scroll a la sección de categorías
-  const categoriasSection = document.querySelector('.categorias-grid')
-  if (categoriasSection) {
-    categoriasSection.scrollIntoView({ behavior: 'smooth' })
-  }
+const buscarOficiantes = async () => {
+  await router.replace({ name: 'Oficiantes', query: { vista: 'categorias' } })
+  await nextTick()
+  document.getElementById('categorias-oficiantes')?.scrollIntoView({ behavior: 'smooth' })
 }
 
 const buscarPorCategoria = (categoria: string) => {
-  // Navegar a la búsqueda con la categoría seleccionada
   router.push({
     name: 'Oficiantes',
     query: { oficio: categoria, tipo: 'oficiante' }
   })
-  // Recargar la página para ejecutar la búsqueda
-  realizarBusqueda({ oficio: categoria, tipo: 'oficiante' })
 }
 
 // Realizar búsqueda de profesionales (sin filtros = listar todos)
@@ -307,26 +312,54 @@ const realizarBusqueda = async (criterios: { oficio?: string; zona?: string; tip
   }
 }
 
-// Limpiar filtros y listar todos de nuevo
-const limpiarBusqueda = () => {
-  criteriosBusqueda.value = { oficio: '', zona: '', tipo: '' }
-  router.push({ name: 'Oficiantes' })
-  realizarBusqueda({ tipo: 'oficiante' })
+// Volver a explorar categorías (sin resultados ni hero intermedio)
+const limpiarBusqueda = async () => {
+  await router.replace({ name: 'Oficiantes', query: { vista: 'categorias' } })
+  await nextTick()
+  document.getElementById('categorias-oficiantes')?.scrollIntoView({ behavior: 'smooth' })
 }
 
-// Contactar profesional
-const verPerfil = (id: number) => {
-  router.push({ name: 'PerfilProfesional', params: { id: String(id) } })
-}
-
-// Al montar: listar todos o aplicar filtros de la URL
-onMounted(() => {
+function aplicarBusquedaDesdeUrl () {
   const query = route.query
-  realizarBusqueda({
-    oficio: (query.oficio as string) || undefined,
-    zona: (query.zona as string) || undefined,
-    tipo: (query.tipo as string) || 'oficiante'
+  const oficio = (query.oficio as string)?.trim() || ''
+  const zona = (query.zona as string)?.trim() || ''
+  const tipo = (query.tipo as string) || 'oficiante'
+
+  // Sin criterios: mostrar categorías (sin listar todos ni hero si vista=categorias)
+  if (!oficio && !zona) {
+    busquedaRealizada.value = false
+    resultadosBusqueda.value = []
+    criteriosBusqueda.value = { oficio: '', zona: '', tipo }
+    return
+  }
+
+  realizarBusqueda({ oficio, zona, tipo })
+}
+
+// Contactar profesional — conservar criterios para volver desde el perfil
+const verPerfil = (id: number) => {
+  const query: Record<string, string> = { from: 'busqueda' }
+  if (criteriosBusqueda.value.oficio) query.oficio = criteriosBusqueda.value.oficio
+  if (criteriosBusqueda.value.zona) query.zona = criteriosBusqueda.value.zona
+  query.tipo = criteriosBusqueda.value.tipo || 'oficiante'
+
+  router.push({
+    name: 'PerfilProfesional',
+    params: { id: String(id) },
+    query
   })
+}
+
+watch(
+  () => route.query,
+  () => {
+    if (route.name === 'Oficiantes') aplicarBusquedaDesdeUrl()
+  },
+  { deep: true }
+)
+
+onMounted(() => {
+  aplicarBusquedaDesdeUrl()
 })
 </script>
 
@@ -337,6 +370,42 @@ onMounted(() => {
 
 .section-fondo-publicar {
   background: linear-gradient(135deg, #f0fdf4 0%, #ecfdf5 50%, #f0f9ff 100%);
+}
+
+.section-resultados {
+  padding: 28px 0 48px;
+  min-height: calc(100vh - 64px);
+}
+
+.resultados-header {
+  margin-bottom: 32px;
+}
+
+.btn-volver {
+  display: inline-block;
+  margin-bottom: 12px;
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: var(--brand, #22c55e);
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.btn-volver:hover {
+  text-decoration: underline;
+}
+
+.resultados-titulo {
+  font-size: 1.75rem;
+  margin: 0 0 8px;
+  color: var(--text);
+}
+
+.resultados-criterios {
+  margin: 0;
+  color: var(--muted);
 }
 
 /* Grid de categorías */

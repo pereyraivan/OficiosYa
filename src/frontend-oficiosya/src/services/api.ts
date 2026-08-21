@@ -51,10 +51,20 @@ api.interceptors.response.use(
       return Promise.reject(networkError)
     }
     
-    // Formatear errores de la API
+    // Formatear errores de la API (incluye validación ModelState de ASP.NET)
+    const data = error.response?.data
+    let message = data?.message as string | undefined
+    const validationErrors = data?.errors as Record<string, string[]> | undefined
+    if (!message && validationErrors) {
+      const firstField = Object.keys(validationErrors)[0]
+      if (firstField && validationErrors[firstField]?.[0]) {
+        message = validationErrors[firstField][0]
+      }
+    }
+
     const errorResponse: ErrorResponse = {
-      message: error.response?.data?.message || `Error ${error.response.status}: ${error.response.statusText}`,
-      errors: error.response?.data?.errors
+      message: message || `Error ${error.response.status}: ${error.response.statusText}`,
+      errors: validationErrors ?? data?.errors
     }
     
     return Promise.reject(errorResponse)

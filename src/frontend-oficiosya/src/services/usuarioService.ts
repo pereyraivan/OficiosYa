@@ -39,5 +39,19 @@ export const usuarioService = {
   async verificarEmail(email: string): Promise<boolean> {
     const response = await api.get<{ disponible: boolean }>(`/usuarios/verificar-email?email=${encodeURIComponent(email)}`)
     return response.data?.disponible ?? true
+  },
+
+  async solicitarRecuperacionContrasena(email: string): Promise<{ success: boolean; message: string }> {
+    const response = await api.post<{ success: boolean; message: string }>('/usuarios/olvide-contrasena', { email })
+    return response.data
+  },
+
+  async restablecerContrasena(datos: {
+    token: string
+    nuevaContrasena: string
+    confirmarContrasena: string
+  }): Promise<{ success: boolean; message: string }> {
+    const response = await api.post<{ success: boolean; message: string }>('/usuarios/restablecer-contrasena', datos)
+    return response.data
   }
 }

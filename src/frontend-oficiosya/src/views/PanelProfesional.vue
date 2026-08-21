@@ -37,7 +37,7 @@
               type="button"
               class="tab-btn"
               :class="{ active: tabActivo === tab.id }"
-              @click="tabActivo = tab.id"
+              @click="seleccionarTab(tab.id)"
             >
               {{ tab.label }}
             </button>
@@ -111,13 +111,19 @@
                   <p v-if="limiteContactosMensual < 99999"><strong>Contactos este mes:</strong> {{ contactosUsadosEsteMes }} / {{ limiteContactosMensual }}</p>
                   <p v-else><strong>Contactos:</strong> Ilimitados</p>
                   <p v-if="accesoEmpleos"><strong>Empleos:</strong> Podés postularte a trabajos publicados</p>
-                  <p v-else class="hint">Para postularte a empleos necesitás plan Premium.</p>
+                  <p v-else class="hint">Para postularte a empleos necesitás plan Pro o Premium.</p>
                 </div>
               </div>
               <div v-else class="suscripcion-card inactiva">
                 <p><strong>Plan actual: Free</strong></p>
                 <p>Contactos este mes: {{ contactosUsadosEsteMes }} / {{ limiteContactosMensual }}</p>
                 <p class="small">Para más contactos y poder postularte a empleos, elegí un plan de pago.</p>
+              </div>
+              <div v-if="suscripcionPendiente" class="suscripcion-card pendiente">
+                <p><strong>Pago pendiente — Plan {{ suscripcionPendiente.tipo }}</strong></p>
+                <p>Monto: ${{ suscripcionPendiente.precio.toLocaleString('es-AR') }}</p>
+                <p v-if="suscripcionPendiente.codigoPago">Código: <code>{{ suscripcionPendiente.codigoPago }}</code></p>
+                <router-link to="/planes" class="btn-cta-outline btn-pago-pendiente">Ver instrucciones de pago</router-link>
               </div>
               <div class="planes-link">
                 <router-link to="/planes" class="btn-cta-outline">Ver planes y precios</router-link>
@@ -140,7 +146,12 @@
 
             <!-- Pestaña Categorías -->
             <section v-show="tabActivo === 'categorias'" class="tab-content">
-              <h2 class="tab-titulo">Servicios que ofrecés</h2>
+              <h2 class="tab-titulo">
+                Servicios que ofrecés
+                <span v-if="formCategorias.length" class="tab-titulo-oficios">
+                  {{ formCategorias.join(', ') }}
+                </span>
+              </h2>
               <p class="tab-desc">Elegí las categorías que correspondan a tu trabajo. Podés seleccionar más de una.</p>
               <div v-if="cargandoCategorias" class="cargando">Cargando categorías...</div>
               <div v-else class="categorias-list">
@@ -167,15 +178,18 @@
 
 <script setup lang="ts">
 import { ref, reactive, computed, watch, onMounted } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import MapaZonasCobertura from '../components/MapaZonasCobertura.vue'
 import { useAuthStore } from '../stores/auth'
 import { profesionalService } from '../services/profesionalService'
 import type { Profesional } from '../types'
 import type { ZonaCoberturaDto } from '../types'
 
+const route = useRoute()
 const router = useRouter()
 const authStore = useAuthStore()
+
+const tabsValidos = ['perfil', 'suscripcion', 'zonas', 'categorias'] as const
 
 const tabs = [
   { id: 'perfil', label: 'Perfil' },
@@ -187,7 +201,10 @@ const tabs = [
 const tabActivo = ref('perfil')
 const cargando = ref(true)
 const error = ref('')
-const miPerfil = ref<(Profesional & { suscripcionActiva?: { tipo: string; fechaVencimiento: string; estado: string } | null }) | null>(null)
+const miPerfil = ref<(Profesional & {
+  suscripcionActiva?: { tipo: string; fechaVencimiento: string; estado: string } | null
+  suscripcionPendiente?: { id: number; tipo: string; precio: number; codigoPago?: string | null; estado: string } | null
+}) | null>(null)
 
 const formPerfil = reactive({ descripcion: '', disponible: true, fotoPerfilBase64: null as string | null })
 const formZonas = ref<ZonaCoberturaDto[]>([])
@@ -199,6 +216,7 @@ const categoriasDisponibles = ref<Array<{ id: number; nombre: string; tipo?: str
 const cargandoCategorias = ref(false)
 
 const suscripcionActiva = computed(() => miPerfil.value && (miPerfil.value as any).suscripcionActiva ? (miPerfil.value as any).suscripcionActiva : null)
+const suscripcionPendiente = computed(() => miPerfil.value && (miPerfil.value as any).suscripcionPendiente ? (miPerfil.value as any).suscripcionPendiente : null)
 const limiteContactosMensual = computed(() => (miPerfil.value as any)?.limiteContactosMensual ?? 2)
 const contactosUsadosEsteMes = computed(() => (miPerfil.value as any)?.contactosUsadosEsteMes ?? 0)
 const accesoEmpleos = computed(() => (miPerfil.value as any)?.accesoEmpleos === true)
@@ -356,6 +374,20 @@ async function guardarCategorias () {
   }
 }
 
+function aplicarTabDesdeQuery () {
+  const tab = typeof route.query.tab === 'string' ? route.query.tab : ''
+  if (tabsValidos.includes(tab as typeof tabsValidos[number])) {
+    tabActivo.value = tab
+  }
+}
+
+function seleccionarTab (tabId: string) {
+  tabActivo.value = tabId
+  if (route.path === '/mi-panel' && route.query.tab !== tabId) {
+    router.replace({ path: '/mi-panel', query: { tab: tabId } })
+  }
+}
+
 function irALogin () {
   router.push({ name: 'Login', query: { redirect: '/mi-panel' } })
 }
@@ -365,12 +397,17 @@ function irARegistro () {
 }
 
 onMounted(() => {
+  aplicarTabDesdeQuery()
   if (authStore.estaAutenticado && authStore.esProfesional) {
     cargarPerfil()
     cargarCategorias()
   } else {
     cargando.value = false
   }
+})
+
+watch(() => route.query.tab, () => {
+  aplicarTabDesdeQuery()
 })
 
 watch(() => authStore.estaAutenticado, (autenticado) => {
@@ -469,6 +506,15 @@ watch(() => authStore.estaAutenticado, (autenticado) => {
   font-weight: 600;
   color: #0f172a;
   margin: 0 0 8px 0;
+}
+
+.tab-titulo-oficios {
+  display: inline-block;
+  margin-left: 10px;
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: var(--brand, #22c55e);
+  vertical-align: baseline;
 }
 
 .tab-desc {
@@ -642,6 +688,23 @@ watch(() => authStore.estaAutenticado, (autenticado) => {
 .suscripcion-card.inactiva {
   background: #f8fafc;
   border: 1px solid #e2e8f0;
+}
+
+.suscripcion-card.pendiente {
+  background: #fffbeb;
+  border: 1px solid #fde68a;
+}
+
+.suscripcion-card.pendiente code {
+  background: #fef3c7;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 0.9rem;
+}
+
+.btn-pago-pendiente {
+  display: inline-block;
+  margin-top: 12px;
 }
 
 .suscripcion-tipo {

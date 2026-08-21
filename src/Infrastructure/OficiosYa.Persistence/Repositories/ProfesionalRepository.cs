@@ -11,13 +11,6 @@ namespace OficiosYa.Persistence.Repositories
         {
         }
 
-        public async Task<IEnumerable<Profesional>> GetByOficioAsync(int oficioId)
-        {
-            return await _dbSet
-                .Where(p => p.ProfesionalOficios.Any(po => po.OficioId == oficioId && po.Activo))
-                .ToListAsync();
-        }
-
         public async Task<IEnumerable<Profesional>> GetByCategoriaAsync(int categoriaId)
         {
             return await _dbSet
@@ -32,7 +25,7 @@ namespace OficiosYa.Persistence.Repositories
                 .ToListAsync();
         }
 
-        public async Task<IEnumerable<Profesional>> BuscarAsync(string? termino, int? oficioId, int? categoriaId, decimal? precioMin, decimal? precioMax, string? localidad, string? provincia)
+        public async Task<IEnumerable<Profesional>> BuscarAsync(string? termino, int? categoriaId, string? localidad, string? provincia)
         {
             var query = _dbSet
                 .Include(p => p.ZonasCobertura)
@@ -44,30 +37,14 @@ namespace OficiosYa.Persistence.Repositories
                                        (p.Usuario != null && (p.Usuario.Nombre.Contains(termino) || p.Usuario.Apellido.Contains(termino))));
             }
 
-            if (oficioId.HasValue)
-            {
-                query = query.Where(p => p.ProfesionalOficios.Any(po => po.OficioId == oficioId.Value && po.Activo));
-            }
-
             if (categoriaId.HasValue)
             {
                 query = query.Where(p => p.ProfesionalCategorias.Any(pc => pc.CategoriaServicioId == categoriaId.Value && pc.Activo));
             }
 
-            if (precioMin.HasValue)
-            {
-                query = query.Where(p => p.ProfesionalOficios.Any(po => po.PrecioHora >= precioMin.Value && po.Activo));
-            }
-
-            if (precioMax.HasValue)
-            {
-                query = query.Where(p => p.ProfesionalOficios.Any(po => po.PrecioHora <= precioMax.Value && po.Activo));
-            }
-
-            // Filtrar por localidad o provincia usando zonas de cobertura
             if (!string.IsNullOrWhiteSpace(localidad) || !string.IsNullOrWhiteSpace(provincia))
             {
-                query = query.Where(p => p.ZonasCobertura.Any(z => z.Activo && 
+                query = query.Where(p => p.ZonasCobertura.Any(z => z.Activo &&
                     (string.IsNullOrWhiteSpace(localidad) || z.Localidad.Contains(localidad, StringComparison.OrdinalIgnoreCase)) &&
                     (string.IsNullOrWhiteSpace(provincia) || z.Provincia.Contains(provincia, StringComparison.OrdinalIgnoreCase))));
             }
@@ -75,14 +52,6 @@ namespace OficiosYa.Persistence.Repositories
             return await query
                 .Where(p => p.Disponible && p.Activo)
                 .ToListAsync();
-        }
-
-        public async Task<Profesional?> GetWithOficiosAsync(int id)
-        {
-            return await _dbSet
-                .Include(p => p.ProfesionalOficios)
-                    .ThenInclude(po => po.Oficio)
-                .FirstOrDefaultAsync(p => p.Id == id);
         }
 
         public async Task<Profesional?> GetWithCategoriasAsync(int id)
@@ -119,7 +88,6 @@ namespace OficiosYa.Persistence.Repositories
 
         public async Task<IEnumerable<Profesional>> GetNearbyAsync(double latitud, double longitud, double radioKm = 10)
         {
-            // Implementación básica - en un proyecto real usarías geolocalización
             return await _dbSet
                 .Where(p => p.Disponible && p.Activo)
                 .ToListAsync();
@@ -127,7 +95,6 @@ namespace OficiosYa.Persistence.Repositories
 
         public async Task AsociarCategoriasAsync(int profesionalId, IEnumerable<string> nombresCategorias)
         {
-            // Obtener las categorías por nombre
             var categorias = await _context.CategoriaServicios
                 .Where(c => nombresCategorias.Contains(c.Nombre) && c.Activo)
                 .ToListAsync();
@@ -171,13 +138,13 @@ namespace OficiosYa.Persistence.Repositories
 
             if (!string.IsNullOrWhiteSpace(localidad))
             {
-                query = query.Where(p => p.ZonasCobertura.Any(z => 
+                query = query.Where(p => p.ZonasCobertura.Any(z =>
                     z.Localidad.Contains(localidad, StringComparison.OrdinalIgnoreCase) && z.Activo));
             }
 
             if (!string.IsNullOrWhiteSpace(provincia))
             {
-                query = query.Where(p => p.ZonasCobertura.Any(z => 
+                query = query.Where(p => p.ZonasCobertura.Any(z =>
                     z.Provincia.Contains(provincia, StringComparison.OrdinalIgnoreCase) && z.Activo));
             }
 

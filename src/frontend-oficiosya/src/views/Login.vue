@@ -1,20 +1,7 @@
 <template>
   <div class="login">
-    <!-- Header -->
-    <header>
-      <div class="container nav">
-        <div class="logo" @click="irAHome">
-          <div class="logo-badge">🛠️</div>
-          <span>OficiosYa</span>
-        </div>
-        <nav class="navlinks">
-          <a href="#" @click="irAHome">Inicio</a>
-        </nav>
-      </div>
-    </header>
-
     <!-- Formulario de Login -->
-    <section class="section" style="background: #f8fafc; min-height: calc(100vh - 80px);">
+    <section class="section" style="background: #f8fafc; min-height: calc(100vh - 60px);">
       <div class="container" style="max-width: 400px; padding-top: 40px;">
         <div class="card" style="padding: 40px;">
           <h2 style="text-align: center; margin-bottom: 30px;">Iniciar sesión</h2>
@@ -40,14 +27,35 @@
             <!-- Contraseña -->
             <div class="form-group">
               <label for="contraseña">Contraseña</label>
-              <input
-                id="contraseña"
-                v-model="formulario.contraseña"
-                type="password"
-                required
-                :class="{ 'error': errores.contraseña }"
-                placeholder="Tu contraseña"
-              />
+              <div class="password-field">
+                <input
+                  id="contraseña"
+                  v-model="formulario.contraseña"
+                  :type="mostrarContraseña ? 'text' : 'password'"
+                  required
+                  :class="{ 'error': errores.contraseña }"
+                  placeholder="Tu contraseña"
+                  autocomplete="current-password"
+                />
+                <button
+                  type="button"
+                  class="password-toggle"
+                  :aria-label="mostrarContraseña ? 'Ocultar contraseña' : 'Mostrar contraseña'"
+                  :title="mostrarContraseña ? 'Ocultar contraseña' : 'Mostrar contraseña'"
+                  @click="mostrarContraseña = !mostrarContraseña"
+                >
+                  <!-- Ojo simple: arco + punto (como apps bancarias) -->
+                  <svg v-if="mostrarContraseña" xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true">
+                    <path d="M5 11c2.8-3.2 5.2-4.5 7-4.5s4.2 1.3 7 4.5" />
+                    <circle cx="12" cy="13.5" r="1.4" fill="currentColor" stroke="none" />
+                    <line x1="6" y1="18" x2="18" y2="6" />
+                  </svg>
+                  <svg v-else xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true">
+                    <path d="M5 11c2.8-3.2 5.2-4.5 7-4.5s4.2 1.3 7 4.5" />
+                    <circle cx="12" cy="13.5" r="1.4" fill="currentColor" stroke="none" />
+                  </svg>
+                </button>
+              </div>
               <span v-if="errores.contraseña" class="error">{{ errores.contraseña }}</span>
             </div>
 
@@ -88,9 +96,9 @@
 
             <!-- Enlace a recuperar contraseña -->
             <div style="text-align: center; margin-top: 10px;">
-              <a href="#" style="color: var(--muted); font-size: 14px;">
+              <router-link to="/olvide-contrasena" style="color: var(--muted); font-size: 14px;">
                 ¿Olvidaste tu contraseña?
-              </a>
+              </router-link>
             </div>
           </form>
         </div>
@@ -116,6 +124,7 @@ const formulario = reactive({
 
 // Estado de la UI
 const cargando = ref(false)
+const mostrarContraseña = ref(false)
 
 // Errores
 const errores = reactive({
@@ -228,5 +237,40 @@ input.error {
   font-size: 14px;
   color: var(--text);
   font-weight: 500;
+}
+
+.password-field {
+  position: relative;
+}
+
+.password-field input {
+  padding-right: 44px;
+}
+
+.password-toggle {
+  position: absolute;
+  top: 50%;
+  right: 10px;
+  transform: translateY(-50%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px;
+  border: none;
+  background: transparent;
+  color: #9ca3af;
+  cursor: pointer;
+  border-radius: 6px;
+  line-height: 0;
+}
+
+.password-toggle:hover {
+  color: #6b7280;
+  background: transparent;
+}
+
+.password-toggle:focus-visible {
+  outline: 2px solid var(--brand);
+  outline-offset: 2px;
 }
 </style>

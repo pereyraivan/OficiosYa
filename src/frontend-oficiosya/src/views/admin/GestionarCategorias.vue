@@ -49,7 +49,11 @@
             </tr>
           </thead>
           <tbody>
-            <tr v-for="categoria in categorias" :key="categoria.id">
+            <tr
+              v-for="categoria in categorias"
+              :key="categoria.id"
+              :class="{ 'fila-inactiva': !categoria.activo }"
+            >
               <td>{{ categoria.id }}</td>
               <td>{{ categoria.nombre }}</td>
               <td>{{ categoria.descripcion || '-' }}</td>
@@ -60,7 +64,7 @@
               </td>
               <td>{{ categoria.icono || '-' }}</td>
               <td>
-                <span :class="categoria.activo ? 'badge bg-success' : 'badge bg-secondary'">
+                <span :class="categoria.activo ? 'badge bg-success' : 'badge badge-inactivo'">
                   {{ categoria.activo ? 'Activo' : 'Inactivo' }}
                 </span>
               </td>
@@ -247,11 +251,12 @@ const guardarCategoria = async () => {
 
   try {
     if (categoriaEditando.value) {
+      const tipo = formulario.value.tipo || categoriaEditando.value.tipo
       const datos: ActualizarCategoriaServicioRequest = {
         id: categoriaEditando.value.id,
         nombre: formulario.value.nombre,
         descripcion: formulario.value.descripcion,
-        tipo: formulario.value.tipo as 'Oficiante' | 'Profesional',
+        tipo: tipo as 'Oficiante' | 'Profesional',
         icono: formulario.value.icono,
         activo: formulario.value.activo ?? true
       }
@@ -299,6 +304,19 @@ onMounted(() => {
 <style scoped>
 .modal {
   background-color: rgba(0, 0, 0, 0.5);
+}
+
+.fila-inactiva {
+  background-color: #fef2f2 !important;
+}
+
+.fila-inactiva:hover {
+  background-color: #fee2e2 !important;
+}
+
+.badge-inactivo {
+  background-color: #fecaca;
+  color: #991b1b;
 }
 </style>
 
