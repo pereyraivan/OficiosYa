@@ -7,6 +7,13 @@
           Elegí el plan que se adapte a vos. Más contactos y acceso a empleos publicados.
         </p>
 
+        <div v-if="suscripcionActiva" class="aviso-plan-activo">
+          <p>
+            <strong>Tu plan {{ suscripcionActiva.tipo }}</strong>
+            vence el {{ formatearFechaPlan(suscripcionActiva.fechaVencimiento) }}.
+          </p>
+        </div>
+
         <div v-if="suscripcionPendiente" class="aviso-pendiente">
           <p>
             <strong>Tenés un pago pendiente</strong> (Plan {{ suscripcionPendiente.tipo }} ·
@@ -79,7 +86,7 @@
     >
       <div class="modal-duracion-card">
         <h3>Elegir duración — Plan {{ planEnSeleccion.nombre }}</h3>
-        <p class="modal-duracion-sub">El pago es por transferencia (CVU/alias). Te daremos un código único para el concepto.</p>
+        <p class="modal-duracion-sub">El pago es por transferencia (CVU/alias). Te mostramos el monto y las cuentas al confirmar.</p>
         <div class="duracion-opciones">
           <button
             v-for="op in opcionesDuracion(planEnSeleccion)"
@@ -118,7 +125,7 @@ import { useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
 import { profesionalService } from '../services/profesionalService'
 import ModalTransferenciaPago from '../components/ModalTransferenciaPago.vue'
-import type { InstruccionesPagoTransferencia, SuscripcionPendiente } from '../types'
+import type { InstruccionesPagoTransferencia, SuscripcionActiva, SuscripcionPendiente } from '../types'
 
 const router = useRouter()
 const authStore = useAuthStore()
@@ -126,6 +133,7 @@ const authStore = useAuthStore()
 const planes = ref<any[]>([])
 const cargando = ref(true)
 const planActual = ref('free')
+const suscripcionActiva = ref<SuscripcionActiva | null>(null)
 const suscripcionPendiente = ref<SuscripcionPendiente | null>(null)
 const planEnSeleccion = ref<any | null>(null)
 const mesesSeleccionados = ref(1)
@@ -283,11 +291,20 @@ function cerrarModalTransferencia () {
   modalTransferenciaAbierto.value = false
 }
 
+function formatearFechaPlan (iso: string) {
+  try {
+    return new Date(iso).toLocaleDateString('es-AR', { day: 'numeric', month: 'long', year: 'numeric' })
+  } catch {
+    return iso
+  }
+}
+
 async function cargarPerfil () {
   if (!authStore.estaAutenticado || !authStore.esProfesional) return
   try {
     const perfil = await profesionalService.obtenerMiPerfil()
     planActual.value = perfil.planActual || 'Free'
+    suscripcionActiva.value = perfil.suscripcionActiva ?? null
     suscripcionPendiente.value = perfil.suscripcionPendiente ?? null
   } catch {
     // Sin perfil profesional
@@ -317,6 +334,14 @@ onMounted(async () => {
 .planes-page { min-height: 100vh; background: var(--bg, #f0fdf4); padding: 2rem 0; }
 .titulo { font-size: 2rem; margin-bottom: 0.5rem; color: var(--text, #0f172a); }
 .subtitulo { color: var(--muted, #64748b); margin-bottom: 1.5rem; }
+.aviso-plan-activo {
+  background: #ecfdf5;
+  border: 1px solid #a7f3d0;
+  border-radius: 12px;
+  padding: 14px 18px;
+  margin-bottom: 1rem;
+}
+.aviso-plan-activo p { margin: 0; color: #065f46; }
 .aviso-pendiente {
   background: #fffbeb;
   border: 1px solid #fde68a;

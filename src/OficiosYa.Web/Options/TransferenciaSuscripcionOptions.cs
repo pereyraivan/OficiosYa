@@ -15,5 +15,5 @@ public sealed class TransferenciaSuscripcionOptions
     public List<CuentaTransferenciaConfigItem> Cuentas { get; set; } = new();
 
     public string MensajeConcepto { get; set; } =
-        "Incluí este código exacto en el concepto o detalle de la transferencia. Así identificamos tu pago al acreditar.";
+        "En el concepto o detalle de la transferencia escribí tu DNI o CUIT exactamente como figura arriba. Así identificamos tu pago.";
 }

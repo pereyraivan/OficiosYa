@@ -66,6 +66,23 @@
                   <span v-if="emailVerificando" class="small">Verificando email...</span>
                 </div>
 
+                <!-- DNI / CUIT -->
+                <div class="form-group">
+                  <label for="documento">DNI o CUIT/CUIL *</label>
+                  <input
+                    id="documento"
+                    v-model="formulario.documento"
+                    type="text"
+                    inputmode="numeric"
+                    required
+                    :class="{ 'error': errores.documento }"
+                    placeholder="Ej: 30123456 o 20-30123456-9"
+                    autocomplete="off"
+                    @blur="validateField('documento', formulario.documento)"
+                  />
+                  <span v-if="errores.documento" class="error">{{ errores.documento }}</span>
+                </div>
+
                 <!-- Teléfono -->
                 <div class="form-group">
                   <label for="telefono">Teléfono (opcional)</label>
@@ -496,7 +513,7 @@
                     <div class="payment-icon">🏦</div>
                     <div class="payment-info">
                       <h4>Transferencia bancaria o billetera</h4>
-                      <p>Al finalizar el registro te mostraremos el <strong>código único</strong> para el concepto y los CVU/alias donde transferir.</p>
+                      <p>Al finalizar el registro te mostraremos el <strong>monto</strong> y los <strong>CVU/alias</strong> donde transferir.</p>
                     </div>
                     <div class="payment-check"><span>✓</span></div>
                   </div>
@@ -509,7 +526,7 @@
                     <div class="info-content">
                       <p><strong>Monto a transferir (estimado):</strong> ${{ montoPago.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) }}</p>
                       <p style="margin-top: 12px; color: #64748b; font-size: 0.9rem;">
-                        El monto y el código <strong>OY-…</strong> definitivos te los damos al confirmar el registro, para que coincida con tu suscripción en el sistema.
+                        Al confirmar el registro te mostramos el monto exacto y las cuentas. Identificamos tu pago con el DNI/CUIT de tu cuenta.
                       </p>
                     </div>
                   </div>
@@ -600,14 +617,6 @@
           Tu cuenta ya está creada. La suscripción queda <strong>pendiente</strong> hasta que acreditemos el pago en nuestras cuentas.
         </p>
         <div class="modal-pago-bloque">
-          <span class="modal-pago-label">Código para el concepto</span>
-          <div class="modal-pago-fila">
-            <code class="modal-pago-codigo">{{ instruccionesTransferencia.codigoReferencia }}</code>
-            <button type="button" class="btn-modal-copiar" @click="copiarAlPortapapeles(instruccionesTransferencia.codigoReferencia)">Copiar</button>
-          </div>
-          <p class="modal-pago-hint">{{ instruccionesTransferencia.mensajeConcepto }}</p>
-        </div>
-        <div class="modal-pago-bloque">
           <span class="modal-pago-label">Monto exacto</span>
           <p class="modal-pago-monto">${{ instruccionesTransferencia.montoArs.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) }}</p>
         </div>
@@ -627,7 +636,7 @@
           </div>
         </div>
         <p v-else class="modal-pago-aviso-config">
-          El administrador aún no cargó los CVU/alias en el servidor. Guardá el código de referencia; cuando tengas los datos de pago, transferí el monto indicado con ese código en el concepto.
+          El administrador aún no cargó los CVU/alias en el servidor. Cuando estén disponibles, transferí el monto indicado.
         </p>
         <button type="button" class="btn-modal-ok" @click="cerrarModalTransferenciaIrHome">Entendido, ir al inicio</button>
       </div>
@@ -724,6 +733,14 @@ function validarPasoActual (step: number): boolean {
     if (!formulario?.nombre?.trim()) { setError('nombre', MENSAJE_OBLIGATORIO); valido = false } else { setError('nombre', '') }
     if (!formulario?.apellido?.trim()) { setError('apellido', MENSAJE_OBLIGATORIO); valido = false } else { setError('apellido', '') }
     if (!formulario?.email?.trim()) { setError('email', MENSAJE_OBLIGATORIO); valido = false } else { setError('email', '') }
+    if (!formulario?.documento?.trim()) {
+      setError('documento', MENSAJE_OBLIGATORIO)
+      valido = false
+    } else if (!validateField('documento', formulario.documento)) {
+      valido = false
+    } else {
+      setError('documento', '')
+    }
     if (!formulario?.password) { setError('password', MENSAJE_OBLIGATORIO); valido = false } else { setError('password', '') }
     if (!formulario?.confirmarPassword) { setError('confirmarPassword', MENSAJE_OBLIGATORIO); valido = false } else { setError('confirmarPassword', '') }
     if (!formulario?.provincia?.trim()) { setError('provincia', MENSAJE_OBLIGATORIO); valido = false } else { setError('provincia', '') }
@@ -1062,9 +1079,8 @@ watch([planSeleccionado, mesesSuscripcion], () => {
 async function copiarAlPortapapeles (texto: string) {
   try {
     await navigator.clipboard.writeText(texto)
-    alert('Copiado al portapapeles.')
   } catch {
-    alert('No se pudo copiar. Seleccioná el texto manualmente.')
+    // Silencioso: el usuario puede seleccionar el texto a mano
   }
 }
 
@@ -1101,6 +1117,7 @@ const registrarProfesional = async () => {
         email: formulario.email.trim(),
         password: formulario.password,
         telefono: formulario.telefono?.trim() || undefined,
+        documento: (formulario.documento || '').replace(/\D/g, ''),
         direccion: formulario.direccion?.trim() || undefined,
         ciudad: formulario.ciudad.trim(),
         provincia: formulario.provincia.trim(),
@@ -1127,7 +1144,7 @@ const registrarProfesional = async () => {
       const result = await profesionalService.registrar(datosProfesional)
       const inst = result.instruccionesTransferencia
 
-      if (inst?.codigoReferencia) {
+      if (inst && inst.montoArs > 0) {
         instruccionesTransferencia.value = inst
         modalTransferenciaAbierto.value = true
       } else {

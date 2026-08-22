@@ -14,6 +14,8 @@ public sealed class AdminProfesionalDto
 
     public string? Telefono { get; set; }
 
+    public string? Documento { get; set; }
+
     public string? Ciudad { get; set; }
 
     public string? Provincia { get; set; }
@@ -49,6 +51,8 @@ public sealed class AdminActualizarProfesionalRequest
     public string Email { get; set; } = string.Empty;
 
     public string? Telefono { get; set; }
+
+    public string? Documento { get; set; }
 
     public string? Ciudad { get; set; }
 

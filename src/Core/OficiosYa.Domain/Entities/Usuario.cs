@@ -26,6 +26,10 @@ namespace OficiosYa.Domain.Entities
         [StringLength(20)]
         public string? Telefono { get; set; }
 
+        /// <summary>DNI (7-8 dígitos) o CUIT/CUIL (11 dígitos), solo números.</summary>
+        [StringLength(20)]
+        public string? Documento { get; set; }
+
         [StringLength(200)]
         public string? Direccion { get; set; }
 

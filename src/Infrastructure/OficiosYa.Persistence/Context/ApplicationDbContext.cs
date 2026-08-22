@@ -38,6 +38,10 @@ namespace OficiosYa.Persistence.Context
                 entity.Property(e => e.Nombre).IsRequired().HasMaxLength(100);
                 entity.Property(e => e.Apellido).IsRequired().HasMaxLength(100);
                 entity.Property(e => e.PasswordHash).IsRequired().HasMaxLength(255);
+                entity.Property(e => e.Documento).HasMaxLength(20);
+                entity.HasIndex(e => e.Documento)
+                      .IsUnique()
+                      .HasFilter("[Documento] IS NOT NULL");
             });
 
             modelBuilder.Entity<PasswordResetToken>(entity =>

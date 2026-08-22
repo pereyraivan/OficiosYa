@@ -52,6 +52,7 @@ public class SuscripcionesController : ControllerBase
                     : string.Empty,
                 ProfesionalEmail = s.Profesional.Usuario != null ? s.Profesional.Usuario.Email : string.Empty,
                 ProfesionalTelefono = s.Profesional.Usuario != null ? s.Profesional.Usuario.Telefono : null,
+                ProfesionalDocumento = s.Profesional.Usuario != null ? s.Profesional.Usuario.Documento : null,
                 PlanSuscripcionId = s.PlanSuscripcionId,
                 PlanNombre = s.PlanSuscripcion != null
                     ? s.PlanSuscripcion.Nombre

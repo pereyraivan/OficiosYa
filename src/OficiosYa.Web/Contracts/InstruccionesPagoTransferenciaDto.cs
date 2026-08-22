@@ -11,7 +11,11 @@ public sealed class InstruccionesTransferenciaCuentaDto
 
 public sealed class InstruccionesPagoTransferenciaDto
 {
+    /// <summary>DNI o CUIT/CUIL a poner en el concepto de la transferencia.</summary>
     public string CodigoReferencia { get; set; } = string.Empty;
+
+    /// <summary>Ej: "DNI" o "CUIT/CUIL".</summary>
+    public string EtiquetaReferencia { get; set; } = "DNI/CUIT";
 
     public decimal MontoArs { get; set; }
 

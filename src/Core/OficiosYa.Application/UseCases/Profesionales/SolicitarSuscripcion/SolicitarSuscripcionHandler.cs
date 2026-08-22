@@ -1,5 +1,5 @@
-using System.Security.Cryptography;
 using MediatR;
+using OficiosYa.Application.Common;
 using OficiosYa.Application.DTOs.Response;
 using OficiosYa.Application.Services;
 using OficiosYa.Domain.Entities;
@@ -10,15 +10,18 @@ namespace OficiosYa.Application.UseCases.Profesionales.SolicitarSuscripcion
     public class SolicitarSuscripcionHandler : IRequestHandler<SolicitarSuscripcionCommand, SolicitarSuscripcionResponse>
     {
         private readonly IProfesionalRepository _profesionalRepository;
+        private readonly IUsuarioRepository _usuarioRepository;
         private readonly IRepository<Suscripcion> _suscripcionRepository;
         private readonly IPlanSuscripcionService _planSuscripcionService;
 
         public SolicitarSuscripcionHandler(
             IProfesionalRepository profesionalRepository,
+            IUsuarioRepository usuarioRepository,
             IRepository<Suscripcion> suscripcionRepository,
             IPlanSuscripcionService planSuscripcionService)
         {
             _profesionalRepository = profesionalRepository;
+            _usuarioRepository = usuarioRepository;
             _suscripcionRepository = suscripcionRepository;
             _planSuscripcionService = planSuscripcionService;
         }
@@ -29,6 +32,14 @@ namespace OficiosYa.Application.UseCases.Profesionales.SolicitarSuscripcion
             var profesional = await _profesionalRepository.GetByUsuarioIdAsync(command.UsuarioId);
             if (profesional == null)
                 throw new InvalidOperationException("No tenés un perfil de profesional asociado a esta cuenta.");
+
+            var usuario = await _usuarioRepository.GetByIdAsync(command.UsuarioId);
+            var documento = DocumentoIdentidad.Normalizar(usuario?.Documento);
+            if (!DocumentoIdentidad.EsValido(documento))
+            {
+                throw new InvalidOperationException(
+                    "Para pagar por transferencia necesitamos tu DNI o CUIT. Completalo en tu perfil o contactá soporte.");
+            }
 
             var planSolicitado = (request.PlanSeleccionado ?? string.Empty).Trim();
             if (string.IsNullOrEmpty(planSolicitado) ||
@@ -55,10 +66,18 @@ namespace OficiosYa.Application.UseCases.Profesionales.SolicitarSuscripcion
 
             if (pendienteExistente != null)
             {
+                // Preferir documento actual del usuario como referencia de concepto.
+                if (string.IsNullOrWhiteSpace(pendienteExistente.CodigoPago) ||
+                    pendienteExistente.CodigoPago.StartsWith("OY-", StringComparison.OrdinalIgnoreCase))
+                {
+                    pendienteExistente.CodigoPago = documento;
+                    await _suscripcionRepository.UpdateAsync(pendienteExistente);
+                }
+
                 return new SolicitarSuscripcionResponse
                 {
                     SuscripcionId = pendienteExistente.Id,
-                    CodigoReferenciaTransferencia = pendienteExistente.CodigoPago ?? string.Empty,
+                    CodigoReferenciaTransferencia = pendienteExistente.CodigoPago ?? documento,
                     MontoSuscripcionPendienteArs = pendienteExistente.Precio,
                     PlanNombre = pendienteExistente.TipoSuscripcion,
                     Meses = CalcularMesesDuracion(pendienteExistente.FechaInicio, pendienteExistente.FechaVencimiento),
@@ -78,8 +97,6 @@ namespace OficiosYa.Application.UseCases.Profesionales.SolicitarSuscripcion
             if (metodoPago != "transferencia")
                 throw new ArgumentException("Por ahora solo está disponible el pago por transferencia.");
 
-            var codigoPago = await GenerarCodigoPagoUnicoAsync();
-
             var suscripcion = new Suscripcion
             {
                 ProfesionalId = profesional.Id,
@@ -90,7 +107,7 @@ namespace OficiosYa.Application.UseCases.Profesionales.SolicitarSuscripcion
                 FechaVencimiento = fechaVencimiento,
                 Estado = "Pendiente",
                 MetodoPago = "transferencia",
-                CodigoPago = codigoPago,
+                CodigoPago = documento,
                 PagoConfirmado = false,
                 FechaRegistro = DateTime.UtcNow
             };
@@ -100,7 +117,7 @@ namespace OficiosYa.Application.UseCases.Profesionales.SolicitarSuscripcion
             return new SolicitarSuscripcionResponse
             {
                 SuscripcionId = suscripcion.Id,
-                CodigoReferenciaTransferencia = codigoPago,
+                CodigoReferenciaTransferencia = documento,
                 MontoSuscripcionPendienteArs = precioSuscripcion,
                 PlanNombre = planSeleccionado.Nombre,
                 Meses = meses,
@@ -112,26 +129,6 @@ namespace OficiosYa.Application.UseCases.Profesionales.SolicitarSuscripcion
         {
             var meses = (vencimiento.Year - inicio.Year) * 12 + (vencimiento.Month - inicio.Month);
             return meses <= 0 ? 1 : meses;
-        }
-
-        private async Task<string> GenerarCodigoPagoUnicoAsync()
-        {
-            for (var i = 0; i < 12; i++)
-            {
-                var codigo = CrearCodigoReferenciaTransferencia();
-                var existe = await _suscripcionRepository.AnyAsync(s => s.CodigoPago == codigo);
-                if (!existe)
-                    return codigo;
-            }
-
-            return CrearCodigoReferenciaTransferencia();
-        }
-
-        private static string CrearCodigoReferenciaTransferencia()
-        {
-            Span<byte> bytes = stackalloc byte[6];
-            RandomNumberGenerator.Fill(bytes);
-            return "OY-" + Convert.ToHexString(bytes);
         }
     }
 }

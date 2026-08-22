@@ -1,7 +1,7 @@
-using System.Security.Cryptography;
 using AutoMapper;
 using BCrypt.Net;
 using MediatR;
+using OficiosYa.Application.Common;
 using OficiosYa.Application.DTOs.Response;
 using OficiosYa.Application.Services;
 using OficiosYa.Domain.Entities;
@@ -39,6 +39,17 @@ namespace OficiosYa.Application.UseCases.Profesionales.RegistrarProfesional
                 return null;
             }
 
+            var documento = DocumentoIdentidad.Normalizar(request.Request.Documento);
+            if (!DocumentoIdentidad.EsValido(documento))
+            {
+                throw new ArgumentException("Ingresá un DNI (7 u 8 dígitos) o CUIT/CUIL (11 dígitos) válido.");
+            }
+
+            if (await _usuarioRepository.DocumentoExistsAsync(documento))
+            {
+                throw new ArgumentException("Ese DNI/CUIT ya está registrado en otra cuenta.");
+            }
+
             // Validar que se hayan seleccionado oficios/categorías
             if (request.Request.Oficios == null || !request.Request.Oficios.Any())
             {
@@ -58,6 +69,7 @@ namespace OficiosYa.Application.UseCases.Profesionales.RegistrarProfesional
                 Email = request.Request.Email.ToLower(),
                 PasswordHash = BCrypt.Net.BCrypt.HashPassword(request.Request.Password),
                 Telefono = request.Request.Telefono,
+                Documento = documento,
                 Direccion = request.Request.Direccion,
                 Ciudad = request.Request.Ciudad,
                 Provincia = request.Request.Provincia,
@@ -170,7 +182,8 @@ namespace OficiosYa.Application.UseCases.Profesionales.RegistrarProfesional
                 string? codigoPagoValor = null;
                 if (metodoLower == "transferencia")
                 {
-                    codigoPagoValor = await GenerarCodigoPagoUnicoAsync();
+                    // Referencia de pago = DNI/CUIT del usuario (fácil de recordar y poner en el concepto).
+                    codigoPagoValor = documento;
                     codigoTransferenciaGenerado = codigoPagoValor;
                     montoSuscripcionPendiente = precioSuscripcion;
                     metodoPago = "transferencia";
@@ -217,26 +230,6 @@ namespace OficiosYa.Application.UseCases.Profesionales.RegistrarProfesional
             }
 
             return response;
-        }
-
-        private async Task<string> GenerarCodigoPagoUnicoAsync()
-        {
-            for (var i = 0; i < 12; i++)
-            {
-                var codigo = CrearCodigoReferenciaTransferencia();
-                var existe = await _suscripcionRepository.AnyAsync(s => s.CodigoPago == codigo);
-                if (!existe)
-                    return codigo;
-            }
-
-            return CrearCodigoReferenciaTransferencia();
-        }
-
-        private static string CrearCodigoReferenciaTransferencia()
-        {
-            Span<byte> bytes = stackalloc byte[6];
-            RandomNumberGenerator.Fill(bytes);
-            return "OY-" + Convert.ToHexString(bytes);
         }
     }
 }

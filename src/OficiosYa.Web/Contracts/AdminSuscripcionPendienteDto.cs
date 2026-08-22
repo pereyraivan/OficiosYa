@@ -7,6 +7,8 @@ public sealed class AdminSuscripcionPendienteDto
     public string ProfesionalNombre { get; set; } = string.Empty;
     public string ProfesionalEmail { get; set; } = string.Empty;
     public string? ProfesionalTelefono { get; set; }
+    /// <summary>DNI/CUIT del usuario (referencia de pago preferida).</summary>
+    public string? ProfesionalDocumento { get; set; }
     public int? PlanSuscripcionId { get; set; }
     public string PlanNombre { get; set; } = string.Empty;
     public decimal Precio { get; set; }

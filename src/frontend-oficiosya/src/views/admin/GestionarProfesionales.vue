@@ -148,6 +148,10 @@
               <input v-model="form.telefono" type="text" class="form-control" maxlength="20" />
             </div>
             <div class="col-md-6">
+              <label class="form-label">DNI / CUIT</label>
+              <input v-model="form.documento" type="text" class="form-control" maxlength="20" placeholder="Solo números" />
+            </div>
+            <div class="col-md-6">
               <label class="form-label">Ciudad</label>
               <input v-model="form.ciudad" type="text" class="form-control" maxlength="100" />
             </div>
@@ -230,6 +234,7 @@ const form = reactive({
   apellido: '',
   email: '',
   telefono: '',
+  documento: '',
   ciudad: '',
   provincia: '',
   descripcion: '',
@@ -247,6 +252,7 @@ const filtrados = computed(() => {
       p.apellido,
       p.email,
       p.telefono,
+      p.documento,
       p.ciudad,
       p.provincia,
       p.planActual,
@@ -323,6 +329,7 @@ async function abrirEditar (p: ProfesionalAdmin) {
     form.apellido = detalle.apellido || ''
     form.email = detalle.email || ''
     form.telefono = detalle.telefono || ''
+    form.documento = detalle.documento || ''
     form.ciudad = detalle.ciudad || ''
     form.provincia = detalle.provincia || ''
     form.descripcion = detalle.descripcion || ''
@@ -351,6 +358,7 @@ async function guardar () {
       apellido: form.apellido.trim(),
       email: form.email.trim(),
       telefono: form.telefono.trim() || null,
+      documento: form.documento.trim() || null,
       ciudad: form.ciudad.trim() || null,
       provincia: form.provincia.trim() || null,
       descripcion: form.descripcion.trim() || null,

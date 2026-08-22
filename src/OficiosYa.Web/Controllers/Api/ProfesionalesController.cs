@@ -15,6 +15,7 @@ using System.Data.Common;
 using System.Security.Claims;
 using OficiosYa.Domain.Entities;
 using OficiosYa.Web.Services;
+using OficiosYa.Application.Common;
 using OficiosYa.Web.Contracts;
 using OficiosYa.Web.Options;
 
@@ -1380,11 +1381,14 @@ namespace OficiosYa.Web.Controllers.Api
             return new InstruccionesPagoTransferenciaDto
             {
                 CodigoReferencia = codigo,
+                EtiquetaReferencia = DocumentoIdentidad.Etiqueta(codigo),
                 MontoArs = monto.Value,
                 Moneda = "ARS",
                 PlanNombre = planNombre,
                 Meses = meses,
-                MensajeConcepto = _transferenciaSuscripcion.MensajeConcepto?.Trim() ?? string.Empty,
+                MensajeConcepto = string.IsNullOrWhiteSpace(_transferenciaSuscripcion.MensajeConcepto)
+                    ? $"En el concepto o detalle de la transferencia escribí tu {DocumentoIdentidad.Etiqueta(codigo)} exactamente como figura arriba."
+                    : _transferenciaSuscripcion.MensajeConcepto.Trim(),
                 Cuentas = cuentas
             };
         }

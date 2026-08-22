@@ -44,6 +44,8 @@ export interface InstruccionesTransferenciaCuenta {
 
 export interface InstruccionesPagoTransferencia {
   codigoReferencia: string
+  /** Ej. "DNI" o "CUIT/CUIL" */
+  etiquetaReferencia?: string
   montoArs: number
   moneda: string
   planNombre: string
@@ -63,6 +65,8 @@ export interface RegistrarProfesionalRequest {
   email: string
   password: string
   telefono?: string
+  /** DNI o CUIT/CUIL */
+  documento: string
   direccion?: string
   ciudad?: string
   provincia?: string
@@ -202,6 +206,7 @@ export interface SuscripcionPendienteAdmin {
   profesionalNombre: string
   profesionalEmail: string
   profesionalTelefono?: string | null
+  profesionalDocumento?: string | null
   planSuscripcionId?: number | null
   planNombre: string
   precio: number
@@ -232,6 +237,7 @@ export interface ProfesionalAdmin {
   apellido: string
   email: string
   telefono?: string | null
+  documento?: string | null
   ciudad?: string | null
   provincia?: string | null
   descripcion?: string | null
@@ -251,6 +257,7 @@ export interface ActualizarProfesionalAdminRequest {
   apellido: string
   email: string
   telefono?: string | null
+  documento?: string | null
   ciudad?: string | null
   provincia?: string | null
   descripcion?: string | null

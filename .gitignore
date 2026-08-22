@@ -5,6 +5,7 @@
 
 # SMTP / claves locales (no subir)
 src/OficiosYa.Web/appsettings.Local.json
+src/OficiosYa.Web/appsettings.Production.json
 
 # User-specific files
 *.rsuser

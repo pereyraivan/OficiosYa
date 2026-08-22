@@ -1,0 +1,23 @@
+{
+  "ConnectionStrings": {
+    "DefaultConnection": "Server=OficiosYa-DB.mssql.somee.com;Database=OficiosYa-DB;User Id=ivanpereyra16_SQLLogin_3;Password=PEGAR_PASSWORD_SQL_AQUI;MultipleActiveResultSets=true;TrustServerCertificate=true;Encrypt=True"
+  },
+  "App": {
+    "FrontendBaseUrl": "http://oficiosya.somee.com",
+    "CorsOrigins": [
+      "http://oficiosya.somee.com",
+      "https://oficiosya.somee.com",
+      "http://www.oficiosya.somee.com",
+      "https://www.oficiosya.somee.com"
+    ]
+  },
+  "Jwt": {
+    "SecretKey": "CambiarPorUnaClaveLargaYUnicaDeAlMenos32Caracteres",
+    "Issuer": "OficiosYa",
+    "Audience": "OficiosYa",
+    "ExpirationMinutes": "10080"
+  },
+  "Email": {
+    "Enabled": false
+  }
+}

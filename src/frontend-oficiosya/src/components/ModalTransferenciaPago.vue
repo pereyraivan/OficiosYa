@@ -13,14 +13,6 @@
         {{ textoIntro }}
       </p>
       <div class="modal-pago-bloque">
-        <span class="modal-pago-label">Código para el concepto</span>
-        <div class="modal-pago-fila">
-          <code class="modal-pago-codigo">{{ instrucciones.codigoReferencia }}</code>
-          <button type="button" class="btn-modal-copiar" @click="copiar(instrucciones.codigoReferencia)">Copiar</button>
-        </div>
-        <p class="modal-pago-hint">{{ instrucciones.mensajeConcepto }}</p>
-      </div>
-      <div class="modal-pago-bloque">
         <span class="modal-pago-label">Monto exacto</span>
         <p class="modal-pago-monto">
           ${{ instrucciones.montoArs.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) }}
@@ -45,7 +37,7 @@
         </div>
       </div>
       <p v-else class="modal-pago-aviso-config">
-        El administrador aún no cargó los CVU/alias en el servidor. Guardá el código de referencia; cuando tengas los datos de pago, transferí el monto indicado con ese código en el concepto.
+        El administrador aún no cargó los CVU/alias en el servidor. Cuando estén disponibles, transferí el monto indicado.
       </p>
       <button type="button" class="btn-modal-ok" @click="emit('cerrar')">{{ textoBoton }}</button>
     </div>

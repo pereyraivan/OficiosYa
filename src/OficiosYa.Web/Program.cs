@@ -121,7 +121,17 @@ builder.Services.AddCors(options =>
         }
         else
         {
-            policy.WithOrigins("http://localhost:5173", "http://localhost:3000", "http://localhost:5174", "http://localhost:5175")
+            var corsOrigins = builder.Configuration.GetSection("App:CorsOrigins").Get<string[]>()
+                ?? new[]
+                {
+                    "http://localhost:5173",
+                    "http://oficiosya.somee.com",
+                    "https://oficiosya.somee.com",
+                    "http://www.oficiosya.somee.com",
+                    "https://www.oficiosya.somee.com"
+                };
+
+            policy.WithOrigins(corsOrigins)
                   .AllowAnyHeader()
                   .AllowAnyMethod()
                   .AllowCredentials();

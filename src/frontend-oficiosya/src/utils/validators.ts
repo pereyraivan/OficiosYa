@@ -77,6 +77,18 @@ export const validators = {
     return { isValid: true }
   },
 
+  /** DNI (7-8) o CUIT/CUIL (11). Acepta guiones/puntos. */
+  documento: (value: string): ValidationResult => {
+    const digits = (value || '').replace(/\D/g, '')
+    if (!digits) {
+      return { isValid: false, message: 'El DNI o CUIT/CUIL es obligatorio' }
+    }
+    if (![7, 8, 11].includes(digits.length)) {
+      return { isValid: false, message: 'Ingresá un DNI (7 u 8 dígitos) o CUIT/CUIL (11 dígitos)' }
+    }
+    return { isValid: true }
+  },
+
   // Validar que se seleccione al menos un elemento de un array
   atLeastOne: (array: any[], fieldName: string = 'Debes seleccionar al menos una opción'): ValidationResult => {
     if (array.length === 0) {

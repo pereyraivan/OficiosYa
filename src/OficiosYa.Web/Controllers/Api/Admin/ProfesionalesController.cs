@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using OficiosYa.Application.Common;
 using OficiosYa.Domain.Entities;
 using OficiosYa.Domain.Interfaces;
 using OficiosYa.Persistence.Context;
@@ -140,6 +141,21 @@ public class ProfesionalesController : ControllerBase
         profesional.Usuario.Ciudad = string.IsNullOrWhiteSpace(request.Ciudad) ? null : request.Ciudad.Trim();
         profesional.Usuario.Provincia = string.IsNullOrWhiteSpace(request.Provincia) ? null : request.Provincia.Trim();
 
+        if (!string.IsNullOrWhiteSpace(request.Documento))
+        {
+            var documento = DocumentoIdentidad.Normalizar(request.Documento);
+            if (!DocumentoIdentidad.EsValido(documento))
+                return BadRequest(new { message = "Ingresá un DNI (7 u 8 dígitos) o CUIT/CUIL (11 dígitos) válido." });
+
+            var docActual = profesional.Usuario.Documento ?? string.Empty;
+            if (!string.Equals(documento, docActual, StringComparison.Ordinal))
+            {
+                if (await _usuarioRepository.DocumentoExistsAsync(documento))
+                    return Conflict(new { message = "Ya existe otro usuario con ese DNI/CUIT." });
+                profesional.Usuario.Documento = documento;
+            }
+        }
+
         profesional.Descripcion = request.Descripcion?.Trim();
         profesional.Disponible = request.Disponible;
         profesional.Activo = request.Activo;
@@ -262,6 +278,7 @@ public class ProfesionalesController : ControllerBase
             Apellido = u?.Apellido ?? string.Empty,
             Email = u?.Email ?? string.Empty,
             Telefono = u?.Telefono,
+            Documento = u?.Documento,
             Ciudad = u?.Ciudad,
             Provincia = u?.Provincia,
             Descripcion = p.Descripcion,

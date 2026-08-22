@@ -4,11 +4,26 @@
       <div>
         <router-link to="/admin" class="text-muted small d-inline-block mb-1">← Volver al panel admin</router-link>
         <h2 class="mb-0">Pagos pendientes</h2>
-        <p class="text-muted mb-0">Confirmá cuando veas la transferencia con el código OY- en tu banco/billetera.</p>
+        <p class="text-muted mb-0">
+          Confirmá cuando veas la transferencia del profesional (el DNI/CUIT aparece en el comprobante).
+        </p>
       </div>
       <button type="button" class="btn btn-outline-secondary" :disabled="cargando" @click="cargar">
         {{ cargando ? 'Actualizando…' : 'Actualizar' }}
       </button>
+    </div>
+
+    <div class="mb-3">
+      <label for="buscar-documento" class="form-label mb-1">Buscar por DNI / CUIT</label>
+      <input
+        id="buscar-documento"
+        v-model="filtroDocumento"
+        type="search"
+        class="form-control"
+        style="max-width: 320px;"
+        placeholder="Ej: 30123456"
+        autocomplete="off"
+      />
     </div>
 
     <div v-if="cargando" class="text-center py-5">
@@ -21,33 +36,37 @@
       No hay suscripciones pendientes de pago.
     </div>
 
+    <div v-else-if="pendientesFiltrados.length === 0" class="alert alert-warning">
+      No hay resultados para “{{ filtroDocumento }}”.
+    </div>
+
     <div v-else class="table-responsive">
       <table class="table table-hover align-middle">
         <thead>
           <tr>
             <th>Fecha</th>
             <th>Profesional</th>
+            <th>DNI / CUIT</th>
             <th>Plan</th>
             <th>Monto</th>
-            <th>Código concepto</th>
             <th>Duración</th>
             <th class="text-end">Acciones</th>
           </tr>
         </thead>
         <tbody>
-          <tr v-for="s in pendientes" :key="s.id">
+          <tr v-for="s in pendientesFiltrados" :key="s.id">
             <td>{{ formatFecha(s.fechaRegistro) }}</td>
             <td>
               <strong>{{ s.profesionalNombre || '—' }}</strong>
               <div class="small text-muted">{{ s.profesionalEmail }}</div>
               <div v-if="s.profesionalTelefono" class="small text-muted">{{ s.profesionalTelefono }}</div>
             </td>
+            <td>
+              <code v-if="documentoMostrar(s)" class="codigo-pago">{{ documentoMostrar(s) }}</code>
+              <span v-else class="text-danger">Sin documento</span>
+            </td>
             <td>{{ s.planNombre }}</td>
             <td><strong>${{ formatMonto(s.precio) }}</strong></td>
-            <td>
-              <code v-if="s.codigoPago" class="codigo-pago">{{ s.codigoPago }}</code>
-              <span v-else class="text-danger">Sin código</span>
-            </td>
             <td>{{ s.mesesDuracion }} mes(es)</td>
             <td class="text-end acciones-cell">
               <button
@@ -75,7 +94,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { adminService } from '../../services/adminService'
 import type { SuscripcionPendienteAdmin } from '../../types'
 
@@ -83,6 +102,25 @@ const pendientes = ref<SuscripcionPendienteAdmin[]>([])
 const cargando = ref(false)
 const error = ref('')
 const procesandoId = ref<number | null>(null)
+const filtroDocumento = ref('')
+
+function soloDigitos (v?: string | null): string {
+  return (v || '').replace(/\D/g, '')
+}
+
+function documentoMostrar (s: SuscripcionPendienteAdmin): string {
+  return s.profesionalDocumento || s.codigoPago || ''
+}
+
+const pendientesFiltrados = computed(() => {
+  const q = soloDigitos(filtroDocumento.value)
+  if (!q) return pendientes.value
+  return pendientes.value.filter((s) => {
+    const doc = soloDigitos(s.profesionalDocumento)
+    const codigo = soloDigitos(s.codigoPago)
+    return doc.includes(q) || codigo.includes(q)
+  })
+})
 
 function formatMonto (n: number): string {
   return n.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
@@ -110,9 +148,10 @@ async function cargar () {
 }
 
 async function confirmar (s: SuscripcionPendienteAdmin) {
+  const doc = documentoMostrar(s) || '(sin documento)'
   const ok = window.confirm(
     `¿Confirmás el pago de ${s.profesionalNombre}?\n\n` +
-    `Plan: ${s.planNombre}\nMonto: $${formatMonto(s.precio)}\nCódigo: ${s.codigoPago || '(sin código)'}\n\n` +
+    `Plan: ${s.planNombre}\nMonto: $${formatMonto(s.precio)}\nDNI/CUIT: ${doc}\n\n` +
     'Solo confirmá si viste el crédito en tu cuenta.'
   )
   if (!ok) return
@@ -149,9 +188,11 @@ onMounted(() => { cargar() })
 
 <style scoped>
 .codigo-pago {
-  font-size: 0.85rem;
-  padding: 0.2rem 0.45rem;
-  background: #f1f5f9;
+  font-size: 0.95rem;
+  font-weight: 600;
+  padding: 0.25rem 0.5rem;
+  background: #ecfdf5;
+  color: #047857;
   border-radius: 4px;
 }
 

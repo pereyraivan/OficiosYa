@@ -117,6 +117,9 @@
               <div class="user-dropdown-info">
                 <strong>{{ nombreCompleto }}</strong>
                 <span>{{ authStore.usuario?.email }}</span>
+                <span v-if="authStore.esProfesional && textoPlanUsuario" class="user-dropdown-plan">
+                  {{ textoPlanUsuario }}
+                </span>
               </div>
             </div>
             <div class="user-dropdown-divider" />
@@ -195,6 +198,48 @@ const inicialesUsuario = computed(() => {
 })
 const planes = ref<any[]>([])
 const cargandoPlanes = ref(false)
+const planUsuarioResumen = ref<{ tipo: string; fechaVencimiento?: string | null; pendiente?: boolean } | null>(null)
+
+const textoPlanUsuario = computed(() => {
+  const p = planUsuarioResumen.value
+  if (!p) return ''
+  if (p.pendiente) return `Plan ${p.tipo} · pago pendiente`
+  if (p.fechaVencimiento) {
+    try {
+      const d = new Date(p.fechaVencimiento)
+      const fecha = d.toLocaleDateString('es-AR', { day: 'numeric', month: 'short', year: 'numeric' })
+      return `Plan ${p.tipo} · vence ${fecha}`
+    } catch {
+      return `Plan ${p.tipo}`
+    }
+  }
+  return `Plan ${p.tipo}`
+})
+
+async function cargarResumenPlanUsuario () {
+  if (!authStore.estaAutenticado || !authStore.esProfesional) {
+    planUsuarioResumen.value = null
+    return
+  }
+  try {
+    const perfil = await profesionalService.obtenerMiPerfil()
+    if (perfil.suscripcionActiva) {
+      planUsuarioResumen.value = {
+        tipo: perfil.suscripcionActiva.tipo,
+        fechaVencimiento: perfil.suscripcionActiva.fechaVencimiento
+      }
+    } else if (perfil.suscripcionPendiente) {
+      planUsuarioResumen.value = {
+        tipo: perfil.suscripcionPendiente.tipo,
+        pendiente: true
+      }
+    } else {
+      planUsuarioResumen.value = { tipo: perfil.planActual || 'Free' }
+    }
+  } catch {
+    planUsuarioResumen.value = null
+  }
+}
 
 function toggleMenu () {
   menuOpen.value = !menuOpen.value
@@ -220,6 +265,7 @@ function toggleUserDropdown () {
     dropdownOpen.value = false
     planesDropdownOpen.value = false
     adminDropdownOpen.value = false
+    void cargarResumenPlanUsuario()
   }
 }
 
@@ -355,8 +401,14 @@ function cerrarDropdownsExternos (event: MouseEvent) {
 
 onMounted(() => {
   cargarPlanes()
+  void cargarResumenPlanUsuario()
   document.addEventListener('click', cerrarDropdownsExternos)
 })
+
+watch(
+  () => [authStore.estaAutenticado, authStore.esProfesional],
+  () => { void cargarResumenPlanUsuario() }
+)
 
 onUnmounted(() => {
   document.removeEventListener('click', cerrarDropdownsExternos)
@@ -733,6 +785,13 @@ onUnmounted(() => {
   color: var(--brand-700, #15803d);
   word-break: break-all;
   opacity: 0.85;
+}
+
+.user-dropdown-plan {
+  margin-top: 4px;
+  font-weight: 600;
+  opacity: 1 !important;
+  color: #047857 !important;
 }
 
 .user-dropdown-divider {

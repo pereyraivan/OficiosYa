@@ -24,6 +24,11 @@ namespace OficiosYa.Application.DTOs.Request
         [StringLength(20, ErrorMessage = "El teléfono no puede exceder 20 caracteres")]
         public string? Telefono { get; set; }
 
+        /// <summary>DNI o CUIT/CUIL (con o sin guiones). Obligatorio para identificar pagos por transferencia.</summary>
+        [Required(ErrorMessage = "El DNI o CUIT/CUIL es obligatorio")]
+        [StringLength(20, ErrorMessage = "El documento no puede exceder 20 caracteres")]
+        public string Documento { get; set; } = string.Empty;
+
         [StringLength(200, ErrorMessage = "La dirección no puede exceder 200 caracteres")]
         public string? Direccion { get; set; }
 

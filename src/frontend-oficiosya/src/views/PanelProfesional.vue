@@ -30,6 +30,45 @@
 
         <!-- Contenido del panel -->
         <template v-else-if="miPerfil">
+          <div
+            class="plan-resumen"
+            :class="{
+              'plan-resumen--activa': !!suscripcionActiva,
+              'plan-resumen--pendiente': !suscripcionActiva && !!suscripcionPendiente,
+              'plan-resumen--free': !suscripcionActiva && !suscripcionPendiente
+            }"
+          >
+            <template v-if="suscripcionActiva">
+              <div class="plan-resumen-main">
+                <span class="plan-resumen-titulo">Plan {{ suscripcionActiva.tipo }}</span>
+                <span class="plan-resumen-estado">Activo</span>
+              </div>
+              <p class="plan-resumen-vencimiento">
+                Vence el <strong>{{ formatearFecha(suscripcionActiva.fechaVencimiento) }}</strong>
+                <span v-if="diasRestantesPlan !== null" class="plan-resumen-dias">
+                  ({{ diasRestantesPlan === 0 ? 'vence hoy' : diasRestantesPlan === 1 ? '1 día restante' : `${diasRestantesPlan} días restantes` }})
+                </span>
+              </p>
+            </template>
+            <template v-else-if="suscripcionPendiente">
+              <div class="plan-resumen-main">
+                <span class="plan-resumen-titulo">Plan {{ suscripcionPendiente.tipo }}</span>
+                <span class="plan-resumen-estado plan-resumen-estado--pendiente">Pago pendiente</span>
+              </div>
+              <p class="plan-resumen-vencimiento">Tu plan se activa cuando acreditemos la transferencia.</p>
+            </template>
+            <template v-else>
+              <div class="plan-resumen-main">
+                <span class="plan-resumen-titulo">Plan Free</span>
+                <span class="plan-resumen-estado plan-resumen-estado--free">Sin vencimiento</span>
+              </div>
+              <p class="plan-resumen-vencimiento">
+                Mejorá tu plan para más contactos y acceso a empleos.
+                <router-link to="/planes" class="plan-resumen-link">Ver planes</router-link>
+              </p>
+            </template>
+          </div>
+
           <div class="panel-tabs">
             <button
               v-for="tab in tabs"
@@ -217,6 +256,20 @@ const cargandoCategorias = ref(false)
 
 const suscripcionActiva = computed(() => miPerfil.value && (miPerfil.value as any).suscripcionActiva ? (miPerfil.value as any).suscripcionActiva : null)
 const suscripcionPendiente = computed(() => miPerfil.value && (miPerfil.value as any).suscripcionPendiente ? (miPerfil.value as any).suscripcionPendiente : null)
+const diasRestantesPlan = computed(() => {
+  const iso = suscripcionActiva.value?.fechaVencimiento
+  if (!iso) return null
+  try {
+    const fin = new Date(iso)
+    // fecha viene como yyyy-MM-dd → tomar fin de ese día local
+    const hoy = new Date()
+    hoy.setHours(0, 0, 0, 0)
+    fin.setHours(0, 0, 0, 0)
+    return Math.max(0, Math.round((fin.getTime() - hoy.getTime()) / 86400000))
+  } catch {
+    return null
+  }
+})
 const limiteContactosMensual = computed(() => (miPerfil.value as any)?.limiteContactosMensual ?? 2)
 const contactosUsadosEsteMes = computed(() => (miPerfil.value as any)?.contactosUsadosEsteMes ?? 0)
 const accesoEmpleos = computed(() => (miPerfil.value as any)?.accesoEmpleos === true)
@@ -469,6 +522,80 @@ watch(() => authStore.estaAutenticado, (autenticado) => {
   gap: 8px;
   margin-bottom: 16px;
   flex-wrap: wrap;
+}
+
+.plan-resumen {
+  margin-bottom: 20px;
+  padding: 16px 18px;
+  border-radius: 12px;
+  border: 1px solid #e2e8f0;
+  background: #f8fafc;
+}
+
+.plan-resumen--activa {
+  background: #ecfdf5;
+  border-color: #a7f3d0;
+}
+
+.plan-resumen--pendiente {
+  background: #fffbeb;
+  border-color: #fde68a;
+}
+
+.plan-resumen--free {
+  background: #f8fafc;
+  border-color: #e2e8f0;
+}
+
+.plan-resumen-main {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 6px;
+}
+
+.plan-resumen-titulo {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.plan-resumen-estado {
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  padding: 3px 8px;
+  border-radius: 999px;
+  background: #059669;
+  color: #fff;
+}
+
+.plan-resumen-estado--pendiente {
+  background: #d97706;
+}
+
+.plan-resumen-estado--free {
+  background: #64748b;
+}
+
+.plan-resumen-vencimiento {
+  margin: 0;
+  font-size: 0.95rem;
+  color: #334155;
+  line-height: 1.4;
+}
+
+.plan-resumen-dias {
+  color: #64748b;
+  margin-left: 4px;
+}
+
+.plan-resumen-link {
+  color: var(--brand, #059669);
+  font-weight: 600;
+  margin-left: 4px;
 }
 
 .tab-btn {

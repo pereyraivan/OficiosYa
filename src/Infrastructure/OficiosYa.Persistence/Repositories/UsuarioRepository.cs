@@ -23,6 +23,14 @@ namespace OficiosYa.Persistence.Repositories
                 .AnyAsync(u => u.Email.ToLower() == email.ToLower());
         }
 
+        public async Task<bool> DocumentoExistsAsync(string documento)
+        {
+            if (string.IsNullOrWhiteSpace(documento))
+                return false;
+
+            return await _dbSet.AnyAsync(u => u.Documento == documento);
+        }
+
         public async Task<IEnumerable<Usuario>> GetActiveUsersAsync()
         {
             return await _dbSet

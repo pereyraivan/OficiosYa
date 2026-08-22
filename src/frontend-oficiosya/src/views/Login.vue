@@ -175,8 +175,6 @@ const iniciarSesion = async () => {
     const exito = await authStore.login(formulario.email.trim(), formulario.contraseña)
     
     if (exito) {
-      // Login exitoso
-      alert('¡Bienvenido!')
       router.push('/')
     } else {
       errores.general = 'Email o contraseña incorrectos'

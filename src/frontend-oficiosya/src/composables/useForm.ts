@@ -183,6 +183,7 @@ export function useProfessionalRegistrationForm() {
       apellido: '',
       email: '',
       telefono: '',
+      documento: '',
       password: '',
       confirmarPassword: '',
       direccion: '',
@@ -199,6 +200,7 @@ export function useProfessionalRegistrationForm() {
       apellido: (value) => validators.minLength(value, 2, 'El apellido'),
       email: (value) => validators.email(value),
       telefono: (value) => validators.phone(value),
+      documento: (value) => validators.documento(value),
       password: (value) => validators.password(value),
       confirmarPassword: (value, form) => {
         if (!form || !form.password) {
