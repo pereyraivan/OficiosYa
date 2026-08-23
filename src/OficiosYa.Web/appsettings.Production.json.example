@@ -3,7 +3,7 @@
     "DefaultConnection": "Server=OficiosYa-DB.mssql.somee.com;Database=OficiosYa-DB;User Id=ivanpereyra16_SQLLogin_3;Password=PEGAR_PASSWORD_SQL_AQUI;MultipleActiveResultSets=true;TrustServerCertificate=true;Encrypt=True"
   },
   "App": {
-    "FrontendBaseUrl": "http://oficiosya.somee.com",
+    "FrontendBaseUrl": "http://oficiosya.somee.com/dist",
     "CorsOrigins": [
       "http://oficiosya.somee.com",
       "https://oficiosya.somee.com",

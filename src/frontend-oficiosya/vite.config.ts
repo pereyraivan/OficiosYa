@@ -4,6 +4,7 @@ import path from 'path'
 
 export default defineConfig({
   plugins: [vue()],
+  base: '/dist/',
   build: {
     outDir: '../OficiosYa.Web/wwwroot/dist',
     emptyOutDir: true

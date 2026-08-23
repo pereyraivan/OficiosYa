@@ -157,8 +157,9 @@ if (!app.Environment.IsDevelopment())
     app.UseHsts();
 }
 
-// Solo redirigir HTTPS en producción
-if (!app.Environment.IsDevelopment())
+// En Somee free suele usarse HTTP; no forzar HTTPS (rompe el sitio).
+if (!app.Environment.IsDevelopment()
+    && builder.Configuration.GetValue("App:ForceHttps", false))
 {
     app.UseHttpsRedirection();
 }
@@ -208,5 +209,7 @@ app.MapControllerRoute(
     pattern: "{controller=Home}/{action=Index}/{id?}")
     .WithStaticAssets();
 
+// Vue SPA (history mode): rutas bajo /dist/* → index.html
+app.MapFallbackToFile("/dist/{*path}", "dist/index.html");
 
 app.Run();

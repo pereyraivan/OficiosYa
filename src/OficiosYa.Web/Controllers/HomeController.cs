@@ -6,14 +6,20 @@ namespace OficiosYa.Web.Controllers;
 public class HomeController : Controller
 {
     private readonly ILogger<HomeController> _logger;
+    private readonly IWebHostEnvironment _env;
 
-    public HomeController(ILogger<HomeController> logger)
+    public HomeController(ILogger<HomeController> logger, IWebHostEnvironment env)
     {
         _logger = logger;
+        _env = env;
     }
 
     public IActionResult Index()
     {
+        var spa = Path.Combine(_env.WebRootPath, "dist", "index.html");
+        if (System.IO.File.Exists(spa))
+            return Redirect("~/dist/");
+
         return View();
     }
 
