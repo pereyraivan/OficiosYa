@@ -21,6 +21,12 @@ namespace OficiosYa.Application.DTOs.Response
 
         /// <summary>Monto de la suscripción pendiente de acreditación (ARS).</summary>
         public decimal? MontoSuscripcionPendienteArs { get; set; }
+
+        /// <summary>True si se aplicó la promo de lanzamiento (plan gratis).</summary>
+        public bool PromoLanzamientoAplicada { get; set; }
+
+        /// <summary>Mensaje opcional de la promo aplicada.</summary>
+        public string? PromoLanzamientoMensaje { get; set; }
     }
 }
 

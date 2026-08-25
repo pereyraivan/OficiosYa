@@ -34,54 +34,100 @@
               </div>
             </form>
           </div>
-          <div class="col-lg-6">
-            <div class="hero-card mobile-accordion-wrap">
+          <div class="col-lg-6 desktop-only">
+            <div class="hero-card">
               <span class="verified-badge">Perfiles destacados</span>
-              <button type="button" class="mobile-accordion-btn mobile-only" @click="accordionCerca = !accordionCerca" aria-expanded="accordionCerca">
-                <span>Perfiles destacados</span>
-                <span class="accordion-chevron" :class="{ open: accordionCerca }">▼</span>
-              </button>
-              <div class="mobile-accordion-content" :class="{ collapsed: !accordionCerca }">
-                <div class="hero-tabs">
-                  <button type="button" class="hero-tab" :class="{ active: tabDestacados === 'profesionales' }" @click="tabDestacados = 'profesionales'">Profesionales</button>
-                  <button type="button" class="hero-tab" :class="{ active: tabDestacados === 'oficiantes' }" @click="tabDestacados = 'oficiantes'">Oficiantes</button>
-                </div>
-                <div class="professionals-grid">
-                  <template v-if="tabDestacados === 'profesionales'">
-                    <div v-for="profesional in profesionalesDestacados" :key="'p-' + profesional.id" class="professional-card" @click="verPerfil(profesional.id)">
-                      <div class="professional-avatar"></div>
-                      <div class="professional-info">
-                        <div class="professional-name">{{ profesional.usuario?.nombre }}</div>
-                        <div class="professional-details">{{ profesional.oficios?.[0]?.nombre || '—' }}</div>
-                        <div class="professional-rating">
-                          <span v-for="n in 5" :key="n" class="rating-star" :class="claseEstrella(n, profesional.calificacionPromedio)" aria-hidden="true">★</span>
-                          <span class="rating-text">({{ profesional.totalResenas ?? 0 }} reseñas)</span>
-                        </div>
-                        <p v-if="profesional.resenas?.length && profesional.resenas[0].comentario" class="professional-resena-preview">
-                          «{{ (profesional.resenas[0].comentario || '').slice(0, 60) }}{{ (profesional.resenas[0].comentario || '').length > 60 ? '…' : '' }}» — {{ profesional.resenas[0].nombreAutor || 'Cliente' }}
-                        </p>
+              <div class="hero-tabs">
+                <button type="button" class="hero-tab" :class="{ active: tabDestacados === 'profesionales' }" @click="tabDestacados = 'profesionales'">Profesionales</button>
+                <button type="button" class="hero-tab" :class="{ active: tabDestacados === 'oficiantes' }" @click="tabDestacados = 'oficiantes'">Oficiantes</button>
+              </div>
+              <div class="professionals-grid">
+                <template v-if="tabDestacados === 'profesionales'">
+                  <div v-for="profesional in profesionalesDestacados" :key="'p-' + profesional.id" class="professional-card" @click="verPerfil(profesional.id)">
+                    <div class="professional-avatar"></div>
+                    <div class="professional-info">
+                      <div class="professional-name">{{ profesional.usuario?.nombre }}</div>
+                      <div class="professional-details">{{ profesional.oficios?.[0]?.nombre || '—' }}</div>
+                      <div class="professional-rating">
+                        <span v-for="n in 5" :key="n" class="rating-star" :class="claseEstrella(n, profesional.calificacionPromedio)" aria-hidden="true">★</span>
+                        <span class="rating-text">({{ profesional.totalResenas ?? 0 }} reseñas)</span>
                       </div>
+                      <p v-if="profesional.resenas?.length && profesional.resenas[0].comentario" class="professional-resena-preview">
+                        «{{ (profesional.resenas[0].comentario || '').slice(0, 60) }}{{ (profesional.resenas[0].comentario || '').length > 60 ? '…' : '' }}» — {{ profesional.resenas[0].nombreAutor || 'Cliente' }}
+                      </p>
                     </div>
-                  </template>
-                  <template v-else>
-                    <div v-for="profesional in oficiantesDestacados" :key="'o-' + profesional.id" class="professional-card" @click="verPerfil(profesional.id)">
-                      <div class="professional-avatar"></div>
-                      <div class="professional-info">
-                        <div class="professional-name">{{ profesional.usuario?.nombre }}</div>
-                        <div class="professional-details">{{ profesional.oficios?.[0]?.nombre || '—' }}</div>
-                        <div class="professional-rating">
-                          <span v-for="n in 5" :key="n" class="rating-star" :class="claseEstrella(n, profesional.calificacionPromedio)" aria-hidden="true">★</span>
-                          <span class="rating-text">({{ profesional.totalResenas ?? 0 }} reseñas)</span>
-                        </div>
-                        <p v-if="profesional.resenas?.length && profesional.resenas[0].comentario" class="professional-resena-preview">
-                          «{{ (profesional.resenas[0].comentario || '').slice(0, 60) }}{{ (profesional.resenas[0].comentario || '').length > 60 ? '…' : '' }}» — {{ profesional.resenas[0].nombreAutor || 'Cliente' }}
-                        </p>
+                  </div>
+                </template>
+                <template v-else>
+                  <div v-for="profesional in oficiantesDestacados" :key="'o-' + profesional.id" class="professional-card" @click="verPerfil(profesional.id)">
+                    <div class="professional-avatar"></div>
+                    <div class="professional-info">
+                      <div class="professional-name">{{ profesional.usuario?.nombre }}</div>
+                      <div class="professional-details">{{ profesional.oficios?.[0]?.nombre || '—' }}</div>
+                      <div class="professional-rating">
+                        <span v-for="n in 5" :key="n" class="rating-star" :class="claseEstrella(n, profesional.calificacionPromedio)" aria-hidden="true">★</span>
+                        <span class="rating-text">({{ profesional.totalResenas ?? 0 }} reseñas)</span>
                       </div>
+                      <p v-if="profesional.resenas?.length && profesional.resenas[0].comentario" class="professional-resena-preview">
+                        «{{ (profesional.resenas[0].comentario || '').slice(0, 60) }}{{ (profesional.resenas[0].comentario || '').length > 60 ? '…' : '' }}» — {{ profesional.resenas[0].nombreAutor || 'Cliente' }}
+                      </p>
                     </div>
-                  </template>
-                </div>
+                  </div>
+                </template>
               </div>
             </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Solapas móviles (+ destacados en móvil) -->
+    <div class="solapas-stack">
+    <!-- Perfiles destacados (móvil) -->
+    <section class="section py-5 mobile-accordion-wrap section-destacados mobile-only-section" id="destacados">
+      <div class="container">
+        <button type="button" class="mobile-accordion-btn mobile-only" @click="accordionCerca = !accordionCerca" :aria-expanded="accordionCerca">
+          <span>Perfiles destacados</span>
+          <span class="accordion-chevron" :class="{ open: accordionCerca }">▼</span>
+        </button>
+        <div class="mobile-accordion-content" :class="{ collapsed: !accordionCerca }">
+          <div class="hero-tabs">
+            <button type="button" class="hero-tab" :class="{ active: tabDestacados === 'profesionales' }" @click="tabDestacados = 'profesionales'">Profesionales</button>
+            <button type="button" class="hero-tab" :class="{ active: tabDestacados === 'oficiantes' }" @click="tabDestacados = 'oficiantes'">Oficiantes</button>
+          </div>
+          <div class="professionals-grid">
+            <template v-if="tabDestacados === 'profesionales'">
+              <div v-for="profesional in profesionalesDestacados" :key="'mp-' + profesional.id" class="professional-card" @click="verPerfil(profesional.id)">
+                <div class="professional-avatar"></div>
+                <div class="professional-info">
+                  <div class="professional-name">{{ profesional.usuario?.nombre }}</div>
+                  <div class="professional-details">{{ profesional.oficios?.[0]?.nombre || '—' }}</div>
+                  <div class="professional-rating">
+                    <span v-for="n in 5" :key="n" class="rating-star" :class="claseEstrella(n, profesional.calificacionPromedio)" aria-hidden="true">★</span>
+                    <span class="rating-text">({{ profesional.totalResenas ?? 0 }} reseñas)</span>
+                  </div>
+                  <p v-if="profesional.resenas?.length && profesional.resenas[0].comentario" class="professional-resena-preview">
+                    «{{ (profesional.resenas[0].comentario || '').slice(0, 60) }}{{ (profesional.resenas[0].comentario || '').length > 60 ? '…' : '' }}» — {{ profesional.resenas[0].nombreAutor || 'Cliente' }}
+                  </p>
+                </div>
+              </div>
+            </template>
+            <template v-else>
+              <div v-for="profesional in oficiantesDestacados" :key="'mo-' + profesional.id" class="professional-card" @click="verPerfil(profesional.id)">
+                <div class="professional-avatar"></div>
+                <div class="professional-info">
+                  <div class="professional-name">{{ profesional.usuario?.nombre }}</div>
+                  <div class="professional-details">{{ profesional.oficios?.[0]?.nombre || '—' }}</div>
+                  <div class="professional-rating">
+                    <span v-for="n in 5" :key="n" class="rating-star" :class="claseEstrella(n, profesional.calificacionPromedio)" aria-hidden="true">★</span>
+                    <span class="rating-text">({{ profesional.totalResenas ?? 0 }} reseñas)</span>
+                  </div>
+                  <p v-if="profesional.resenas?.length && profesional.resenas[0].comentario" class="professional-resena-preview">
+                    «{{ (profesional.resenas[0].comentario || '').slice(0, 60) }}{{ (profesional.resenas[0].comentario || '').length > 60 ? '…' : '' }}» — {{ profesional.resenas[0].nombreAutor || 'Cliente' }}
+                  </p>
+                </div>
+              </div>
+            </template>
           </div>
         </div>
       </div>
@@ -113,15 +159,21 @@
     </section>
 
     <!-- Cómo funciona -->
-    <section class="section py-5" id="como-funciona" style="background:#f8fafc">
+    <section class="section py-5 mobile-accordion-wrap section-como-funciona" id="como-funciona" style="background:#f8fafc">
       <div class="container">
-        <h2 class="text-center mb-5">¿Cómo funciona?</h2>
-        <div class="row g-4">
-          <div class="col-lg-4 col-md-6" v-for="paso in pasos" :key="paso.numero">
-            <div class="step text-center">
-              <div class="step-badge" :style="paso.badgeStyle">{{ paso.numero }}</div>
-              <h4 class="mb-3">{{ paso.titulo }}</h4>
-              <p class="text-muted">{{ paso.descripcion }}</p>
+        <h2 class="text-center mb-5 desktop-only">¿Cómo funciona?</h2>
+        <button type="button" class="mobile-accordion-btn mobile-only" @click="accordionComoFunciona = !accordionComoFunciona" :aria-expanded="accordionComoFunciona">
+          <span>¿Cómo funciona?</span>
+          <span class="accordion-chevron" :class="{ open: accordionComoFunciona }">▼</span>
+        </button>
+        <div class="mobile-accordion-content" :class="{ collapsed: !accordionComoFunciona }">
+          <div class="row g-4">
+            <div class="col-lg-4 col-md-6" v-for="paso in pasos" :key="paso.numero">
+              <div class="step text-center">
+                <div class="step-badge" :style="paso.badgeStyle">{{ paso.numero }}</div>
+                <h4 class="mb-3">{{ paso.titulo }}</h4>
+                <p class="text-muted">{{ paso.descripcion }}</p>
+              </div>
             </div>
           </div>
         </div>
@@ -158,25 +210,32 @@
     </section>
 
     <!-- Testimonios -->
-    <section class="section py-5 bg-light">
+    <section class="section py-5 bg-light mobile-accordion-wrap section-testimonios" id="testimonios">
       <div class="container">
-        <h2 class="text-center mb-5">Lo que dicen nuestros usuarios</h2>
-        <div class="row g-4">
-          <div class="col-lg-4 col-md-6" v-for="testimonio in testimonios" :key="testimonio.id">
-            <div class="testi card h-100">
-              <div class="card-body">
-                <blockquote class="blockquote mb-0">
-                  <p class="mb-3">"{{ testimonio.comentario }}"</p>
-                  <footer class="blockquote-footer">
-                    <cite title="Source Title">{{ testimonio.autor }}</cite>
-                  </footer>
-                </blockquote>
+        <h2 class="text-center mb-5 desktop-only">Lo que dicen nuestros usuarios</h2>
+        <button type="button" class="mobile-accordion-btn mobile-only" @click="accordionTestimonios = !accordionTestimonios" :aria-expanded="accordionTestimonios">
+          <span>Lo que dicen nuestros usuarios</span>
+          <span class="accordion-chevron" :class="{ open: accordionTestimonios }">▼</span>
+        </button>
+        <div class="mobile-accordion-content" :class="{ collapsed: !accordionTestimonios }">
+          <div class="row g-4">
+            <div class="col-lg-4 col-md-6" v-for="testimonio in testimonios" :key="testimonio.id">
+              <div class="testi card h-100">
+                <div class="card-body">
+                  <blockquote class="blockquote mb-0">
+                    <p class="mb-3">"{{ testimonio.comentario }}"</p>
+                    <footer class="blockquote-footer">
+                      <cite title="Source Title">{{ testimonio.autor }}</cite>
+                    </footer>
+                  </blockquote>
+                </div>
               </div>
             </div>
           </div>
         </div>
       </div>
     </section>
+    </div><!-- /.solapas-stack -->
 
     <!-- CTA profesional -->
     <section class="section py-5 cta-section">
@@ -194,32 +253,27 @@
     </section>
 
     <!-- Footer -->
-    <footer>
+    <footer class="site-footer">
       <div class="container footer">
         <div>
           <div class="logo" style="color:white; cursor: pointer;" @click="irAInicio">
             <div class="logo-badge">🛠️</div>
             <span>OficiosYa</span>
           </div>
-          <p class="small" style="margin-top:8px">Conectamos personas con profesionales de confianza en su zona.</p>
-        </div>
-        <div>
-          <strong>Explorar</strong>
-          <div class="small" style="margin-top:8px"><a href="#" @click="irAOficiantes" style="color:inherit">Oficiantes</a></div>
-          <div class="small"><a href="#" style="color:inherit">Profesionales</a></div>
+          <p class="small footer-desc">Conectamos personas con profesionales de confianza en su zona.</p>
         </div>
         <div>
           <strong>Ayuda</strong>
-          <div class="small" style="margin-top:8px"><a href="#" style="color:inherit">Centro de ayuda</a></div>
-          <div class="small"><a href="#" style="color:inherit">Contacto</a></div>
+          <div class="small footer-link-block"><a href="#" @click.prevent="abrirAyuda" style="color:inherit">Centro de ayuda</a></div>
+          <div class="small"><a href="#" @click.prevent="abrirAyuda" style="color:inherit">Contacto</a></div>
         </div>
         <div>
           <strong>Legal</strong>
-          <div class="small" style="margin-top:8px"><RouterLink to="/terminos-y-condiciones" style="color:inherit; text-decoration:none">Términos y condiciones</RouterLink></div>
+          <div class="small footer-link-block"><RouterLink to="/terminos-y-condiciones" style="color:inherit; text-decoration:none">Términos y condiciones</RouterLink></div>
           <div class="small"><RouterLink to="/politica-de-privacidad" style="color:inherit; text-decoration:none">Política de privacidad</RouterLink></div>
         </div>
       </div>
-      <div class="container" style="padding:12px 0;border-top:1px solid #1f2937;color:#94a3b8">
+      <div class="container footer-copy">
         <div class="small">© 2025 OficiosYa</div>
       </div>
     </footer>
@@ -232,6 +286,7 @@ import { useRouter, useRoute } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
 import { profesionalService } from '../services/profesionalService'
 import { CATEGORIAS_SERVICIO } from '../utils/constants'
+import { abrirMenuSoporteWhatsApp } from '../utils/soporteWhatsApp'
 import CiudadAutocomplete from '../components/CiudadAutocomplete.vue'
 import SearchableDropdown from '../components/SearchableDropdown.vue'
 import type { Profesional } from '../types'
@@ -258,7 +313,9 @@ const cargandoCategorias = ref(false)
 // Acordeón móvil: solapas desplegables (solo en vista móvil)
 const accordionCerca = ref(false)
 const accordionCategorias = ref(false)
+const accordionComoFunciona = ref(false)
 const accordionDestacados = ref(false)
+const accordionTestimonios = ref(false)
 
 // Opciones del dropdown según el tipo de búsqueda - cargadas desde el backend
 const opcionesDropdown = computed(() => {
@@ -377,6 +434,10 @@ function claseEstrella (n: number, rating: number | undefined) {
 
 const irAInicio = () => {
   document.getElementById('inicio')?.scrollIntoView({ behavior: 'smooth' })
+}
+
+const abrirAyuda = () => {
+  abrirMenuSoporteWhatsApp()
 }
 
 const irAOficiantes = () => {
@@ -984,6 +1045,7 @@ onMounted(async () => {
 }
 
 /* Mantener el estilo del footer */
+.site-footer,
 footer {
   background: var(--bg-soft);
   color: #cbd5e1;
@@ -991,9 +1053,30 @@ footer {
 
 .footer {
   display: grid;
-  grid-template-columns: 2fr 1fr 1fr 1fr;
+  grid-template-columns: 2fr 1fr 1fr;
   gap: 16px;
   padding: 32px 0;
+}
+
+.footer > div {
+  min-width: 0;
+}
+
+.footer a {
+  word-break: break-word;
+  overflow-wrap: anywhere;
+}
+
+.footer-desc,
+.footer-link-block {
+  margin-top: 8px;
+}
+
+.footer-copy {
+  padding: 12px 20px;
+  border-top: 1px solid #1f2937;
+  color: #94a3b8;
+  box-sizing: border-box;
 }
 
 .small {
@@ -1016,6 +1099,134 @@ footer {
   .desktop-only {
     display: none !important;
   }
+
+  /* Hero más corto en móvil: menos hueco vacío debajo de la card */
+  .hero.bg-primary {
+    padding-top: 20px !important;
+    padding-bottom: 0 !important;
+  }
+  .hero .min-vh-50 {
+    min-height: 0 !important;
+  }
+  .hero h1.display-4 {
+    font-size: 1.55rem !important;
+    line-height: 1.2 !important;
+    margin-bottom: 0.75rem !important;
+  }
+  .hero .lead {
+    font-size: 0.9rem !important;
+    line-height: 1.4 !important;
+    margin-bottom: 1rem !important;
+  }
+  .hero .container {
+    padding-left: 16px;
+    padding-right: 16px;
+  }
+
+  /* En móvil la card del hero no se usa (destacados va en solapas-stack) */
+  .hero-card .verified-badge {
+    display: none !important;
+  }
+
+  /* Footer: no pegar el texto al borde en móvil */
+  .site-footer .container.footer,
+  .site-footer .footer-copy {
+    padding-left: 20px !important;
+    padding-right: 20px !important;
+  }
+  .site-footer .footer {
+    padding-top: 28px;
+    padding-bottom: 24px;
+    gap: 20px 16px;
+    grid-template-columns: 1fr 1fr !important;
+  }
+
+  .site-footer .footer > div:first-child {
+    grid-column: 1 / -1;
+  }
+
+  .site-footer .footer > div {
+    max-width: 100%;
+  }
+
+  /* Campos del buscador alineados (mismo padding / ícono) */
+  .search-container :deep(.searchable-dropdown),
+  .search-container :deep(.ciudad-autocomplete) {
+    width: 100%;
+  }
+  .search-container :deep(.searchable-dropdown .search-field),
+  .search-container :deep(.ciudad-autocomplete .search-field) {
+    padding: 12px 14px !important;
+    gap: 10px !important;
+    min-height: 48px !important;
+    box-sizing: border-box !important;
+    display: flex !important;
+    align-items: center !important;
+  }
+  .search-container :deep(.searchable-dropdown .search-field > svg:first-child),
+  .search-container :deep(.ciudad-autocomplete .search-field > svg:first-child) {
+    width: 18px !important;
+    height: 18px !important;
+    min-width: 18px !important;
+    flex-shrink: 0 !important;
+    margin: 0 !important;
+    display: block !important;
+  }
+  .search-container :deep(.searchable-dropdown .search-input),
+  .search-container :deep(.ciudad-autocomplete .search-input) {
+    padding: 0 !important;
+    margin: 0 !important;
+    flex: 1 1 auto !important;
+    min-width: 0 !important;
+  }
+  .search-container :deep(.ciudad-autocomplete .search-field) {
+    border: none !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+    background: transparent !important;
+  }
+  .search-container :deep(.ciudad-autocomplete .search-field:focus-within) {
+    border: none !important;
+    box-shadow: none !important;
+  }
+
+  /*
+   * Bloque único de solapas (incluye Perfiles destacados).
+   */
+  .solapas-stack {
+    background: #f1f5f9;
+    padding: 16px 0;
+    margin-top: 0;
+  }
+
+  .solapas-stack > .mobile-accordion-wrap,
+  .solapas-stack > .section.py-5 {
+    position: relative;
+    z-index: 1;
+    margin-top: 0 !important;
+    margin-bottom: 0 !important;
+    padding-top: 0 !important;
+    padding-bottom: 0 !important;
+    background: transparent !important;
+  }
+
+  .solapas-stack > .mobile-accordion-wrap:last-child {
+    padding-bottom: 0 !important;
+  }
+
+  .solapas-stack > .mobile-accordion-wrap:last-child .mobile-accordion-btn {
+    margin-bottom: 0;
+  }
+
+  .solapas-stack .container {
+    padding-left: 16px;
+    padding-right: 16px;
+  }
+
+  .section-destacados.mobile-only-section {
+    display: block !important;
+  }
+
   .mobile-accordion-btn {
     width: 100%;
     display: flex;
@@ -1026,15 +1237,47 @@ footer {
     font-size: 1.05rem;
     font-weight: 600;
     color: #0f172a;
-    background: linear-gradient(135deg, #f0fdf4, #ecfdf5);
-    border: 2px solid rgba(34, 197, 94, 0.3);
+    background: #fff;
+    border: 2px solid rgba(34, 197, 94, 0.28);
     border-radius: 12px;
     cursor: pointer;
     transition: background 0.2s, border-color 0.2s;
-    margin-bottom: 0;
+    margin: 0 0 12px 0;
+    box-shadow: 0 2px 10px rgba(15, 23, 42, 0.06);
+  }
+
+  /* CTA verde: mismo aire que arriba/abajo de las solapas */
+  .cta-section.section.py-5 {
+    padding-top: 0 !important;
+    padding-bottom: 16px !important;
+  }
+  .cta-section .cta-block {
+    flex-direction: column;
+    align-items: stretch;
+    text-align: left;
+    gap: 12px;
+    padding: 16px !important;
+    border-radius: 14px;
+  }
+  .cta-section .cta-block h2 {
+    font-size: 1.15rem !important;
+    line-height: 1.25 !important;
+    margin: 0 0 6px !important;
+  }
+  .cta-section .cta-block .small {
+    font-size: 0.85rem !important;
+    line-height: 1.35 !important;
+  }
+  .cta-section .cta-block button,
+  .cta-section .cta-block .btn {
+    width: 100%;
+    padding: 10px 14px !important;
+    font-size: 0.95rem !important;
+    border-radius: 999px;
+    white-space: normal;
   }
   .mobile-accordion-btn:hover {
-    background: linear-gradient(135deg, #dcfce7, #d1fae5);
+    background: #f0fdf4;
     border-color: var(--brand);
   }
   .accordion-chevron {
@@ -1053,19 +1296,36 @@ footer {
     max-height: 0 !important;
     opacity: 0;
     margin-top: 0;
+    margin-bottom: 0;
     padding-top: 0;
     padding-bottom: 0;
   }
   .mobile-accordion-content:not(.collapsed) {
     max-height: 2000px;
-    margin-top: 12px;
+    margin-top: 0;
+    margin-bottom: 12px;
+    padding: 12px;
+    background: #fff;
+    border-radius: 12px;
+    box-shadow: 0 2px 10px rgba(15, 23, 42, 0.06);
   }
-  .hero-card.mobile-accordion-wrap .mobile-accordion-content:not(.collapsed) {
-    margin-top: 12px;
+
+  #como-funciona .step {
+    background: #fff;
+    border-radius: 12px;
+    padding: 16px 12px;
   }
 }
 
+/* Solapas: wrapper neutro en desktop; en móvil se estiliza dentro del media query */
+.mobile-only-section {
+  display: none;
+}
+
 @media (min-width: 769px) {
+  .solapas-stack {
+    display: contents; /* no altera el layout desktop */
+  }
   .mobile-accordion-content.collapsed {
     max-height: none;
     opacity: 1;
@@ -1077,15 +1337,35 @@ footer {
   .search-container {
     flex-direction: column;
     gap: 8px;
+    padding: 8px;
   }
-  
-  .search-field {
-    border: 1px solid #e5e7eb;
-    border-radius: 8px;
+
+  .search-container :deep(.searchable-dropdown .search-field),
+  .search-container :deep(.ciudad-autocomplete .search-field) {
+    border: 1px solid #e5e7eb !important;
+    border-radius: 8px !important;
+    padding: 12px 14px !important;
+    background: #fff !important;
+  }
+
+  .search-container :deep(.searchable-dropdown .search-field > svg:first-child),
+  .search-container :deep(.ciudad-autocomplete .search-field > svg:first-child) {
+    width: 18px !important;
+    height: 18px !important;
+    min-width: 18px !important;
+    margin: 0 !important;
   }
   
   .search-button {
     width: 100%;
+  }
+
+  .hero h1.display-4 {
+    font-size: 1.35rem !important;
+  }
+
+  .hero .lead {
+    font-size: 0.85rem !important;
   }
   
   /* Responsive para la grid de profesionales */

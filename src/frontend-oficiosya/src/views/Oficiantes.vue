@@ -1,31 +1,5 @@
 <template>
   <div class="oficiantes">
-    <!-- Hero Section (landing inicial; oculto en resultados y al explorar categorías tras búsqueda) -->
-    <section
-      v-if="mostrarHero"
-      class="hero"
-      style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 80px 0;"
-    >
-      <div class="container">
-        <div style="text-align: center; max-width: 800px; margin: 0 auto;">
-          <h1 style="font-size: 3rem; margin-bottom: 20px; font-weight: 700;">
-            🧰 Oficiantes
-          </h1>
-          <p style="font-size: 1.2rem; margin-bottom: 30px; opacity: 0.9;">
-            Encontrá los mejores oficiantes para trabajos técnicos y manuales en tu zona
-          </p>
-          <div style="display: flex; gap: 16px; justify-content: center; flex-wrap: wrap;">
-            <button class="cta" style="background: white; color: #667eea; border: none;" @click="irARegistro()">
-              Registrate como Oficiante
-            </button>
-            <button class="cta" style="background: transparent; color: white; border: 2px solid white;" @click="buscarOficiantes">
-              Buscar Oficiantes
-            </button>
-          </div>
-        </div>
-      </div>
-    </section>
-
     <!-- Resultados de Búsqueda -->
     <section v-if="mostrarResultados" class="section section-fondo-publicar section-resultados">
       <div class="container">
@@ -163,14 +137,9 @@
           <p class="small" style="margin-top:8px">Conectamos personas con profesionales de confianza en su zona.</p>
         </div>
         <div>
-          <strong>Explorar</strong>
-          <div class="small" style="margin-top:8px"><a href="#" style="color:inherit">Oficiantes</a></div>
-          <div class="small"><a href="#" style="color:inherit">Profesionales</a></div>
-        </div>
-        <div>
           <strong>Ayuda</strong>
-          <div class="small" style="margin-top:8px"><a href="#" style="color:inherit">Centro de ayuda</a></div>
-          <div class="small"><a href="#" style="color:inherit">Contacto</a></div>
+          <div class="small" style="margin-top:8px"><a href="#" @click.prevent="abrirAyuda" style="color:inherit">Centro de ayuda</a></div>
+          <div class="small"><a href="#" @click.prevent="abrirAyuda" style="color:inherit">Contacto</a></div>
         </div>
         <div>
           <strong>Legal</strong>
@@ -190,6 +159,7 @@ import { ref, onMounted, computed, nextTick, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
 import { CATEGORIAS_SERVICIO } from '../utils/constants'
+import { abrirMenuSoporteWhatsApp } from '../utils/soporteWhatsApp'
 import { profesionalService } from '../services/profesionalService'
 import type { Profesional } from '../types'
 
@@ -207,13 +177,14 @@ const criteriosBusqueda = ref({
   tipo: ''
 })
 
-// Mostrar resultados solo cuando hay criterios de búsqueda en la URL
-const mostrarResultados = computed(() => busquedaRealizada.value)
+// Mostrar resultados cuando hay criterios en la URL o cuando ya se buscó
+const tieneCriteriosEnUrl = computed(() => {
+  const oficio = (route.query.oficio as string)?.trim() || ''
+  const zona = (route.query.zona as string)?.trim() || ''
+  return !!(oficio || zona)
+})
 
-// Hero: solo en landing /oficiantes sin búsqueda ni modo categorías
-const mostrarHero = computed(() =>
-  !mostrarResultados.value && route.query.vista !== 'categorias'
-)
+const mostrarResultados = computed(() => busquedaRealizada.value || tieneCriteriosEnUrl.value)
 
 function claseEstrella (n: number, rating: number | undefined) {
   const r = Math.min(5, Math.max(0, Number(rating ?? 0)))
@@ -245,6 +216,10 @@ const irAInicio = () => {
   router.push('/')
 }
 
+const abrirAyuda = () => {
+  abrirMenuSoporteWhatsApp()
+}
+
 const irAOficiantes = () => {
   router.push('/oficiantes')
 }
@@ -273,12 +248,6 @@ const irALogin = () => {
 const cerrarSesion = () => {
   authStore.logout()
   router.push('/')
-}
-
-const buscarOficiantes = async () => {
-  await router.replace({ name: 'Oficiantes', query: { vista: 'categorias' } })
-  await nextTick()
-  document.getElementById('categorias-oficiantes')?.scrollIntoView({ behavior: 'smooth' })
 }
 
 const buscarPorCategoria = (categoria: string) => {
@@ -333,6 +302,8 @@ function aplicarBusquedaDesdeUrl () {
     return
   }
 
+  busquedaRealizada.value = true
+  criteriosBusqueda.value = { oficio, zona, tipo }
   realizarBusqueda({ oficio, zona, tipo })
 }
 
@@ -638,14 +609,6 @@ onMounted(() => {
   
   .pasos-grid {
     grid-template-columns: 1fr;
-  }
-  
-  .hero h1 {
-    font-size: 2rem !important;
-  }
-  
-  .hero p {
-    font-size: 1rem !important;
   }
 }
 </style>

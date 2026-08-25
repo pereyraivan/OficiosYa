@@ -1,14 +1,14 @@
 <template>
   <div class="terminos-condiciones">
-    <section class="section" style="background: #f8fafc; min-height: calc(100vh - 80px);">
-      <div class="container" style="max-width: 800px; padding-top: 40px;">
-        <div class="card" style="padding: 40px;">
-          <h1 style="text-align: center; margin-bottom: 30px;">Términos y Condiciones de Uso</h1>
-          <div style="text-align: center; margin-bottom: 30px; color: var(--muted);">
+    <section class="section legales-section">
+      <div class="container legales-container">
+        <div class="card legales-card">
+          <h1 class="legales-titulo">Términos y Condiciones de Uso</h1>
+          <div class="legales-fecha">
             <p>Última actualización: {{ fechaActualizacion }}</p>
           </div>
 
-          <div class="content" style="line-height: 1.6;">
+          <div class="content">
             <h2>1. Aceptación</h2>
             <p>Al registrarse, navegar o utilizar la plataforma OficiosYa (“la Plataforma”), usted (“Usuario”) acepta estos Términos y Condiciones. Si no acepta estos términos, no debe utilizar la Plataforma. El uso continuado implica la aceptación de las modificaciones que se publiquen.</p>
 
@@ -79,7 +79,7 @@
             </ul>
           </div>
 
-          <div style="text-align: center; margin-top: 40px;">
+          <div class="legales-acciones">
             <button @click="irAHome" class="cta">Volver al Inicio</button>
           </div>
         </div>
@@ -99,10 +99,6 @@ const fechaActualizacion = ref('20 de Octubre de 2025')
 const irAHome = () => {
   router.push(ROUTES.HOME)
 }
-
-const irARegistro = () => {
-  router.push(ROUTES.REGISTER_PROFESSIONAL)
-}
 </script>
 
 <style scoped>
@@ -110,8 +106,45 @@ const irARegistro = () => {
   min-height: 100vh;
 }
 
-.logo {
-  cursor: pointer;
+.legales-section {
+  background: #f8fafc;
+  min-height: calc(100vh - 80px);
+  padding: 40px 24px 60px;
+}
+
+.legales-container {
+  max-width: 800px;
+  margin: 0 auto;
+  padding-top: 0;
+}
+
+.legales-card {
+  padding: 40px;
+  cursor: default;
+}
+
+.legales-card:hover {
+  transform: none;
+}
+
+.legales-titulo {
+  text-align: center;
+  margin-bottom: 30px;
+}
+
+.legales-fecha {
+  text-align: center;
+  margin-bottom: 30px;
+  color: var(--muted);
+}
+
+.content {
+  line-height: 1.6;
+}
+
+.legales-acciones {
+  text-align: center;
+  margin-top: 40px;
 }
 
 .content h2 {
@@ -134,5 +167,37 @@ const irARegistro = () => {
 .content li {
   margin-bottom: 8px;
   color: var(--muted);
+}
+
+@media (max-width: 600px) {
+  .legales-section {
+    padding: 12px 0 48px;
+  }
+
+  .legales-container {
+    max-width: 100%;
+    padding-left: 10px;
+    padding-right: 10px;
+  }
+
+  .legales-card {
+    padding: 18px 14px;
+    border-radius: 12px;
+  }
+
+  .legales-titulo {
+    font-size: 1.35rem;
+    margin-bottom: 16px;
+  }
+
+  .legales-fecha {
+    margin-bottom: 20px;
+    font-size: 0.875rem;
+  }
+
+  .content h2 {
+    font-size: 1.05rem;
+    margin-top: 22px;
+  }
 }
 </style>

@@ -1,47 +1,53 @@
 <template>
   <div class="empleos-publicados">
     <section class="section main-section">
-      <div class="container">
-        <h1 class="titulo">Empleos publicados</h1>
-        <p class="subtitulo">
-          Encontrá trabajos que necesitan tu oficio o profesión. Cuando tengas un plan activo podrás postularte y enviar tu presupuesto.
-        </p>
+      <div class="container container-empleos">
+        <div class="empleos-panel">
+          <header class="empleos-header">
+            <h1 class="titulo">Empleos publicados</h1>
+            <p class="subtitulo">
+              Encontrá trabajos que necesitan tu oficio o profesión. Cuando tengas un plan activo podrás postularte y enviar tu presupuesto.
+            </p>
+          </header>
 
-        <div class="filtro-row">
-          <label class="filtro-label">Filtrar por categoría</label>
-          <select v-model="categoriaId" @change="buscar" class="select-categoria">
-            <option :value="null">Todas las categorías</option>
-            <option v-for="c in categorias" :key="c.id" :value="c.id">{{ c.nombre }}</option>
-          </select>
-          <button type="button" class="btn-buscar" @click="buscar">Buscar</button>
-        </div>
-
-        <div v-if="cargando" class="cargando">Cargando empleos...</div>
-        <div v-else-if="error" class="error-msg">{{ error }}</div>
-        <div v-else-if="trabajos.length === 0" class="sin-resultados">
-          No hay empleos publicados con los filtros seleccionados.
-        </div>
-        <div v-else>
-          <div class="grid-trabajos">
-            <article
-              v-for="t in trabajos"
-              :key="t.id"
-              class="card-trabajo"
-              @click="verDetalle(t.id)"
-            >
-              <div class="card-trabajo-categorias">
-                <span v-for="cat in t.categorias" :key="cat.id" class="badge-cat">{{ cat.nombre }}</span>
-              </div>
-              <p class="card-trabajo-descripcion">{{ t.descripcionResumen }}</p>
-              <div class="card-trabajo-fecha">{{ fechaFormateada(t.fechaCreacion) }}</div>
-              <button type="button" class="btn-ver" @click.stop="verDetalle(t.id)">Ver detalle</button>
-            </article>
+          <div class="filtro-box">
+            <label class="filtro-label">Filtrar por categoría</label>
+            <div class="filtro-row">
+              <select v-model="categoriaId" @change="buscar" class="select-categoria">
+                <option :value="null">Todas las categorías</option>
+                <option v-for="c in categorias" :key="c.id" :value="c.id">{{ c.nombre }}</option>
+              </select>
+              <button type="button" class="btn-buscar" @click="buscar">Buscar</button>
+            </div>
           </div>
 
-          <div v-if="totalPaginas > 1" class="paginacion">
-            <button type="button" class="btn-pag" :disabled="page <= 1" @click="irPagina(page - 1)">Anterior</button>
-            <span class="pag-info">Página {{ page }} de {{ totalPaginas }}</span>
-            <button type="button" class="btn-pag" :disabled="page >= totalPaginas" @click="irPagina(page + 1)">Siguiente</button>
+          <div v-if="cargando" class="cargando">Cargando empleos...</div>
+          <div v-else-if="error" class="error-msg">{{ error }}</div>
+          <div v-else-if="trabajos.length === 0" class="sin-resultados">
+            No hay empleos publicados con los filtros seleccionados.
+          </div>
+          <div v-else>
+            <div class="grid-trabajos">
+              <article
+                v-for="t in trabajos"
+                :key="t.id"
+                class="card-trabajo"
+                @click="verDetalle(t.id)"
+              >
+                <div class="card-trabajo-categorias">
+                  <span v-for="cat in t.categorias" :key="cat.id" class="badge-cat">{{ cat.nombre }}</span>
+                </div>
+                <p class="card-trabajo-descripcion">{{ t.descripcionResumen }}</p>
+                <div class="card-trabajo-fecha">{{ fechaFormateada(t.fechaCreacion) }}</div>
+                <button type="button" class="btn-ver" @click.stop="verDetalle(t.id)">Ver detalle</button>
+              </article>
+            </div>
+
+            <div v-if="totalPaginas > 1" class="paginacion">
+              <button type="button" class="btn-pag" :disabled="page <= 1" @click="irPagina(page - 1)">Anterior</button>
+              <span class="pag-info">Página {{ page }} de {{ totalPaginas }}</span>
+              <button type="button" class="btn-pag" :disabled="page >= totalPaginas" @click="irPagina(page + 1)">Siguiente</button>
+            </div>
           </div>
         </div>
       </div>
@@ -143,65 +149,142 @@ watch(() => route.query.categoriaId, (v) => {
   background: linear-gradient(135deg, #f0fdf4 0%, #ecfdf5 50%, #f0f9ff 100%);
 }
 
-.main-section { padding: 40px 24px 60px; }
-.titulo { font-size: 1.75rem; font-weight: 700; color: #0f172a; margin: 0 0 8px 0; }
-.subtitulo { color: #64748b; margin: 0 0 24px 0; font-size: 0.9375rem; }
+.main-section {
+  padding: 40px 24px 60px;
+}
+
+.container-empleos {
+  max-width: 960px;
+  margin: 0 auto;
+}
+
+.empleos-panel {
+  background: rgba(255, 255, 255, 0.96);
+  border: 1px solid rgba(34, 197, 94, 0.14);
+  border-radius: 16px;
+  box-shadow: 0 4px 24px rgba(15, 23, 42, 0.06);
+  padding: 32px;
+  box-sizing: border-box;
+}
+
+.empleos-header {
+  margin-bottom: 24px;
+  padding-bottom: 20px;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.titulo {
+  font-size: 1.75rem;
+  font-weight: 700;
+  color: #0f172a;
+  margin: 0 0 8px 0;
+}
+
+.subtitulo {
+  color: #64748b;
+  margin: 0;
+  font-size: 0.9375rem;
+  line-height: 1.5;
+}
+
+.filtro-box {
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  border-radius: 12px;
+  padding: 16px 18px;
+  margin-bottom: 24px;
+}
+
+.filtro-label {
+  display: block;
+  font-weight: 600;
+  color: #166534;
+  font-size: 0.875rem;
+  margin-bottom: 10px;
+}
 
 .filtro-row {
   display: flex;
   align-items: center;
   gap: 12px;
-  margin-bottom: 24px;
   flex-wrap: wrap;
 }
-.filtro-label { font-weight: 500; color: #0f172a; font-size: 14px; }
+
 .select-categoria {
+  flex: 1;
+  min-width: 200px;
   padding: 10px 14px;
-  border: 1px solid #e2e8f0;
+  border: 1px solid #86efac;
   border-radius: 8px;
   font-size: 14px;
-  min-width: 220px;
+  background: #fff;
+  color: #0f172a;
 }
+
+.select-categoria:focus {
+  outline: none;
+  border-color: #22c55e;
+  box-shadow: 0 0 0 2px rgba(34, 197, 94, 0.2);
+}
+
 .btn-buscar {
   padding: 10px 20px;
   background: #22c55e;
   color: white;
   border: none;
   border-radius: 8px;
-  font-weight: 500;
+  font-weight: 600;
   cursor: pointer;
 }
-.btn-buscar:hover { filter: brightness(1.05); }
 
-.cargando, .error-msg, .sin-resultados {
+.btn-buscar:hover {
+  filter: brightness(1.05);
+}
+
+.cargando,
+.error-msg,
+.sin-resultados {
   padding: 40px 20px;
   text-align: center;
   color: #64748b;
+  background: #f8fafc;
+  border-radius: 12px;
+  border: 1px dashed #cbd5e1;
 }
-.error-msg { color: #dc2626; }
+
+.error-msg {
+  color: #dc2626;
+  background: #fef2f2;
+  border-color: #fecaca;
+}
 
 .grid-trabajos {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
-  gap: 20px;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 16px;
 }
+
 .card-trabajo {
-  background: white;
+  background: #fff;
   border-radius: 12px;
   padding: 20px;
   border: 1px solid #e2e8f0;
   cursor: pointer;
-  transition: box-shadow 0.2s;
+  transition: box-shadow 0.2s, border-color 0.2s;
 }
+
 .card-trabajo:hover {
-  box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+  box-shadow: 0 4px 14px rgba(34, 197, 94, 0.12);
+  border-color: #bbf7d0;
 }
+
 .card-trabajo-categorias {
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
   margin-bottom: 12px;
 }
+
 .badge-cat {
   font-size: 0.75rem;
   padding: 4px 10px;
@@ -209,6 +292,7 @@ watch(() => route.query.categoriaId, (v) => {
   color: #166534;
   border-radius: 999px;
 }
+
 .card-trabajo-descripcion {
   font-size: 0.9375rem;
   color: #475569;
@@ -219,11 +303,13 @@ watch(() => route.query.categoriaId, (v) => {
   -webkit-box-orient: vertical;
   overflow: hidden;
 }
+
 .card-trabajo-fecha {
   font-size: 0.8125rem;
   color: #94a3b8;
   margin-bottom: 12px;
 }
+
 .btn-ver {
   padding: 8px 16px;
   background: transparent;
@@ -234,15 +320,19 @@ watch(() => route.query.categoriaId, (v) => {
   font-weight: 500;
   cursor: pointer;
 }
-.btn-ver:hover { background: #f0fdf4; }
+
+.btn-ver:hover {
+  background: #f0fdf4;
+}
 
 .paginacion {
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 16px;
-  margin-top: 32px;
+  margin-top: 28px;
 }
+
 .btn-pag {
   padding: 8px 16px;
   border: 1px solid #e2e8f0;
@@ -251,7 +341,58 @@ watch(() => route.query.categoriaId, (v) => {
   cursor: pointer;
   font-size: 14px;
 }
-.btn-pag:hover:not(:disabled) { background: #f1f5f9; }
-.btn-pag:disabled { opacity: 0.5; cursor: not-allowed; }
-.pag-info { font-size: 14px; color: #64748b; }
+
+.btn-pag:hover:not(:disabled) {
+  background: #f0fdf4;
+  border-color: #bbf7d0;
+}
+
+.btn-pag:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.pag-info {
+  font-size: 14px;
+  color: #64748b;
+}
+
+@media (max-width: 600px) {
+  .main-section {
+    padding: 12px 0 48px;
+  }
+
+  .container-empleos {
+    max-width: 100%;
+    padding-left: 10px;
+    padding-right: 10px;
+  }
+
+  .empleos-panel {
+    padding: 18px 14px;
+    border-radius: 12px;
+  }
+
+  .titulo {
+    font-size: 1.35rem;
+  }
+
+  .filtro-row {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .select-categoria {
+    min-width: 0;
+    width: 100%;
+  }
+
+  .btn-buscar {
+    width: 100%;
+  }
+
+  .grid-trabajos {
+    grid-template-columns: 1fr;
+  }
+}
 </style>

@@ -289,6 +289,8 @@ watch(idProfesional, (id) => {
 .container-landing {
   max-width: 560px;
   margin: 0 auto;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .dejar-resena-loading,
@@ -303,6 +305,38 @@ watch(idProfesional, (id) => {
   border-radius: 16px;
   box-shadow: 0 4px 20px rgba(0,0,0,0.06);
   padding: 32px;
+  box-sizing: border-box;
+}
+
+@media (max-width: 600px) {
+  .dejar-resena-main {
+    padding: 12px 0 48px;
+  }
+
+  .container-form,
+  .container-landing {
+    max-width: 100%;
+    padding-left: 10px;
+    padding-right: 10px;
+  }
+
+  .card-form {
+    padding: 18px 14px;
+    border-radius: 12px;
+  }
+
+  .titulo-form {
+    font-size: 1.25rem;
+  }
+
+  .resena-form-stars {
+    gap: 8px;
+  }
+
+  .star-btn {
+    font-size: 1.6rem;
+    padding: 0 2px;
+  }
 }
 
 .titulo-form {

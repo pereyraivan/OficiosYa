@@ -55,7 +55,10 @@ export interface InstruccionesPagoTransferencia {
 }
 
 export interface RegistrarProfesionalApiResponse {
-  profesional: Profesional
+  profesional: Profesional & {
+    promoLanzamientoAplicada?: boolean
+    promoLanzamientoMensaje?: string | null
+  }
   instruccionesTransferencia?: InstruccionesPagoTransferencia | null
 }
 

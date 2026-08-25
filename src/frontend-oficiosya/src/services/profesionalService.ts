@@ -176,6 +176,22 @@ export const profesionalService = {
     }
   },
 
+  /** Promo de lanzamiento (Premium gratis N días). */
+  async obtenerLanzamientoPromo(): Promise<{
+    activa: boolean
+    planNombre?: string | null
+    diasGratis?: number
+    fechaFinUtc?: string | null
+    mensaje?: string | null
+  }> {
+    try {
+      const response = await api.get('/config/lanzamiento-promo')
+      return response.data ?? { activa: false }
+    } catch {
+      return { activa: false }
+    }
+  },
+
   /** Indica si el profesional autenticado puede postularse a empleos (Pro/Premium). */
   async yoPuedoPostularEmpleos(): Promise<{ puedePostularEmpleos: boolean; planActual: string }> {
     const response = await api.get<{ puedePostularEmpleos: boolean; planActual: string }>('/profesionales/yo-puedo-postular-empleos')

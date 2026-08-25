@@ -1,8 +1,10 @@
 using AutoMapper;
 using BCrypt.Net;
 using MediatR;
+using Microsoft.Extensions.Options;
 using OficiosYa.Application.Common;
 using OficiosYa.Application.DTOs.Response;
+using OficiosYa.Application.Options;
 using OficiosYa.Application.Services;
 using OficiosYa.Domain.Entities;
 using OficiosYa.Domain.Interfaces;
@@ -16,19 +18,22 @@ namespace OficiosYa.Application.UseCases.Profesionales.RegistrarProfesional
         private readonly IRepository<Suscripcion> _suscripcionRepository;
         private readonly IPlanSuscripcionService _planSuscripcionService;
         private readonly IMapper _mapper;
+        private readonly LanzamientoPromoOptions _promo;
 
         public RegistrarProfesionalHandler(
             IUsuarioRepository usuarioRepository,
             IProfesionalRepository profesionalRepository,
             IRepository<Suscripcion> suscripcionRepository,
             IPlanSuscripcionService planSuscripcionService,
-            IMapper mapper)
+            IMapper mapper,
+            IOptions<LanzamientoPromoOptions> promoOptions)
         {
             _usuarioRepository = usuarioRepository;
             _profesionalRepository = profesionalRepository;
             _suscripcionRepository = suscripcionRepository;
             _planSuscripcionService = planSuscripcionService;
             _mapper = mapper;
+            _promo = promoOptions.Value;
         }
 
         public async Task<ProfesionalResponse?> Handle(RegistrarProfesionalCommand request, CancellationToken cancellationToken)
@@ -129,10 +134,12 @@ namespace OficiosYa.Application.UseCases.Profesionales.RegistrarProfesional
             // Asociar categorías seleccionadas usando el repositorio
             await _profesionalRepository.AsociarCategoriasAsync(profesionalCreado.Id, request.Request.Oficios);
 
-            // Asociar zonas de cobertura si se proporcionaron (plan Free = 1 zona; al registrarse no tiene suscripción activa)
+            var promoActiva = _promo.EstaActivaAhora();
+            var maxZonasRegistro = promoActiva ? 99999 : 1; // Promo Premium = zonas libres; Free = 1
+
+            // Asociar zonas de cobertura si se proporcionaron
             if (request.Request.ZonasCobertura != null && request.Request.ZonasCobertura.Any())
             {
-                const int maxZonasRegistro = 1; // Sin plan activo = Free = 1 zona
                 var zonas = request.Request.ZonasCobertura
                     .Take(maxZonasRegistro)
                     .Select(z => new ZonaCobertura
@@ -148,67 +155,99 @@ namespace OficiosYa.Application.UseCases.Profesionales.RegistrarProfesional
                 await _profesionalRepository.AsociarZonasCoberturaAsync(profesionalCreado.Id, zonas);
             }
 
-            // Crear suscripción inicial según el plan elegido en el registro.
-            var mesesSuscripcion = request.Request.MesesSuscripcion ?? 1;
-            var planSolicitado = (request.Request.PlanSeleccionado ?? "Free").Trim();
-            var planSolicitadoNormalizado = planSolicitado.ToLowerInvariant() switch
-            {
-                "basica" => "Basico",
-                "basico" => "Basico",
-                _ => planSolicitado
-            };
-
             string? codigoTransferenciaGenerado = null;
             decimal? montoSuscripcionPendiente = null;
+            var promoAplicada = false;
+            string? promoMensaje = null;
 
-            // Free no requiere crear registro de suscripción.
-            if (!string.Equals(planSolicitadoNormalizado, "free", StringComparison.OrdinalIgnoreCase))
+            if (promoActiva)
             {
-                var planSeleccionado = await _planSuscripcionService.ObtenerPlanPorNombreAsync(planSolicitadoNormalizado);
-                if (planSeleccionado == null)
+                var planPromo = await _planSuscripcionService.ObtenerPlanPorNombreAsync(_promo.PlanNombre.Trim());
+                if (planPromo == null)
                 {
-                    throw new ArgumentException($"El plan '{planSolicitado}' no existe.");
+                    throw new ArgumentException($"Promo de lanzamiento: el plan '{_promo.PlanNombre}' no existe en la base.");
                 }
 
-                // PrecioMensual / Trimestral / etc. en BD ya son montos finales por período (no aplicar descuento otra vez).
-                var precioSuscripcion = await _planSuscripcionService.CalcularPrecioAsync(planSeleccionado.Nombre, mesesSuscripcion);
                 var fechaInicio = DateTime.UtcNow;
-                var fechaVencimiento = fechaInicio.AddMonths(mesesSuscripcion);
-
-                var metodoPago = request.Request.MetodoPago?.Trim();
-                if (string.IsNullOrEmpty(metodoPago))
-                    metodoPago = "transferencia";
-                var metodoLower = metodoPago.ToLowerInvariant();
-                string? codigoPagoValor = null;
-                if (metodoLower == "transferencia")
-                {
-                    // Referencia de pago = DNI/CUIT del usuario (fácil de recordar y poner en el concepto).
-                    codigoPagoValor = documento;
-                    codigoTransferenciaGenerado = codigoPagoValor;
-                    montoSuscripcionPendiente = precioSuscripcion;
-                    metodoPago = "transferencia";
-                }
-                else if (metodoLower is "rapipago" or "pagosfaciles")
-                {
-                    codigoPagoValor = request.Request.CodigoPago;
-                }
-
-                var suscripcion = new Suscripcion
+                var suscripcionPromo = new Suscripcion
                 {
                     ProfesionalId = profesionalCreado.Id,
-                    PlanSuscripcionId = planSeleccionado.Id,
-                    TipoSuscripcion = planSeleccionado.Nombre,
-                    Precio = precioSuscripcion,
+                    PlanSuscripcionId = planPromo.Id,
+                    TipoSuscripcion = planPromo.Nombre,
+                    Precio = 0,
                     FechaInicio = fechaInicio,
-                    FechaVencimiento = fechaVencimiento,
-                    Estado = "Pendiente", // Pendiente hasta confirmar el pago
-                    MetodoPago = metodoPago,
-                    CodigoPago = codigoPagoValor,
-                    PagoConfirmado = false,
+                    FechaVencimiento = fechaInicio.AddDays(_promo.DiasGratis),
+                    Estado = "Activa",
+                    MetodoPago = "promo_lanzamiento",
+                    CodigoPago = null,
+                    PagoConfirmado = true,
                     FechaRegistro = DateTime.UtcNow
                 };
 
-                await _suscripcionRepository.AddAsync(suscripcion);
+                await _suscripcionRepository.AddAsync(suscripcionPromo);
+                promoAplicada = true;
+                promoMensaje =
+                    $"¡Listo! Tenés {planPromo.Nombre} gratis por {_promo.DiasGratis} días (hasta {suscripcionPromo.FechaVencimiento:dd/MM/yyyy}).";
+            }
+            else
+            {
+                // Crear suscripción inicial según el plan elegido en el registro.
+                var mesesSuscripcion = request.Request.MesesSuscripcion ?? 1;
+                var planSolicitado = (request.Request.PlanSeleccionado ?? "Free").Trim();
+                var planSolicitadoNormalizado = planSolicitado.ToLowerInvariant() switch
+                {
+                    "basica" => "Basico",
+                    "basico" => "Basico",
+                    _ => planSolicitado
+                };
+
+                // Free no requiere crear registro de suscripción.
+                if (!string.Equals(planSolicitadoNormalizado, "free", StringComparison.OrdinalIgnoreCase))
+                {
+                    var planSeleccionado = await _planSuscripcionService.ObtenerPlanPorNombreAsync(planSolicitadoNormalizado);
+                    if (planSeleccionado == null)
+                    {
+                        throw new ArgumentException($"El plan '{planSolicitado}' no existe.");
+                    }
+
+                    var precioSuscripcion = await _planSuscripcionService.CalcularPrecioAsync(planSeleccionado.Nombre, mesesSuscripcion);
+                    var fechaInicio = DateTime.UtcNow;
+                    var fechaVencimiento = fechaInicio.AddMonths(mesesSuscripcion);
+
+                    var metodoPago = request.Request.MetodoPago?.Trim();
+                    if (string.IsNullOrEmpty(metodoPago))
+                        metodoPago = "transferencia";
+                    var metodoLower = metodoPago.ToLowerInvariant();
+                    string? codigoPagoValor = null;
+                    if (metodoLower == "transferencia")
+                    {
+                        codigoPagoValor = documento;
+                        codigoTransferenciaGenerado = codigoPagoValor;
+                        montoSuscripcionPendiente = precioSuscripcion;
+                        metodoPago = "transferencia";
+                    }
+                    else if (metodoLower is "rapipago" or "pagosfaciles")
+                    {
+                        codigoPagoValor = request.Request.CodigoPago;
+                    }
+
+                    var suscripcion = new Suscripcion
+                    {
+                        ProfesionalId = profesionalCreado.Id,
+                        PlanSuscripcionId = planSeleccionado.Id,
+                        TipoSuscripcion = planSeleccionado.Nombre,
+                        Precio = precioSuscripcion,
+                        FechaInicio = fechaInicio,
+                        FechaVencimiento = fechaVencimiento,
+                        Estado = "Pendiente",
+                        MetodoPago = metodoPago,
+                        CodigoPago = codigoPagoValor,
+                        PagoConfirmado = false,
+                        FechaRegistro = DateTime.UtcNow
+                    };
+
+                    await _suscripcionRepository.AddAsync(suscripcion);
+                }
             }
 
             // Cargar el profesional con sus categorías para el response
@@ -227,6 +266,8 @@ namespace OficiosYa.Application.UseCases.Profesionales.RegistrarProfesional
                     .ToList();
                 response.CodigoReferenciaTransferencia = codigoTransferenciaGenerado;
                 response.MontoSuscripcionPendienteArs = montoSuscripcionPendiente;
+                response.PromoLanzamientoAplicada = promoAplicada;
+                response.PromoLanzamientoMensaje = promoMensaje;
             }
 
             return response;

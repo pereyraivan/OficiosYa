@@ -252,11 +252,16 @@ onUnmounted(() => {
   color: #64748b;
   position: relative;
   width: 100%;
+  min-height: 48px;
+  box-sizing: border-box;
 }
 
-.search-field svg:first-child {
+.search-field > svg:first-child {
   color: #64748b;
   flex-shrink: 0;
+  width: 18px;
+  height: 18px;
+  display: block;
 }
 
 .search-input {
@@ -266,8 +271,11 @@ onUnmounted(() => {
   color: #0f172a;
   font-size: 14px;
   width: 100%;
+  flex: 1;
+  min-width: 0;
   padding: 0;
-  padding-left: 0;
+  margin: 0;
+  line-height: 1.25;
 }
 
 .search-input::placeholder {

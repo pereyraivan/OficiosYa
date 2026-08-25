@@ -279,8 +279,37 @@ onMounted(() => {
   gap: 16px;
 }
 @media (max-width: 600px) {
+  .formulario-section {
+    padding: 12px 0 48px;
+  }
+
+  .container-form {
+    max-width: 100%;
+    padding-left: 10px;
+    padding-right: 10px;
+  }
+
+  .card-form {
+    padding: 18px 14px;
+    border-radius: 12px;
+  }
+
+  .titulo {
+    font-size: 1.35rem;
+  }
+
+  .subtitulo {
+    margin-bottom: 24px;
+    font-size: 0.875rem;
+  }
+
   .form-row {
     grid-template-columns: 1fr;
+  }
+
+  .categorias-grid {
+    grid-template-columns: 1fr;
+    padding: 10px;
   }
 }
 .input-buscador {

@@ -1,9 +1,9 @@
 <template>
   <div class="registrar-profesional">
     <!-- Formulario de Registro de Profesional con Wizard (el menú superior es el AppNav global) -->
-    <section class="section" style="background: linear-gradient(135deg, #f0fdf4 0%, #ecfdf5 50%, #f0f9ff 100%); min-height: calc(100vh - 80px);">
-      <div class="container" style="max-width: 800px; padding-top: 40px;">
-        <div class="card" style="padding: 40px; background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(10px); border: 1px solid rgba(34, 197, 94, 0.1);">
+    <section class="section registro-section" style="background: linear-gradient(135deg, #f0fdf4 0%, #ecfdf5 50%, #f0f9ff 100%); min-height: calc(100vh - 80px);">
+      <div class="container registro-container">
+        <div class="card registro-card">
           <h2 style="text-align: center; margin-bottom: 10px;">Crear cuenta de profesional/oficiante</h2>
           <p style="text-align: center; color: var(--muted); margin-bottom: 30px;">
             Registrate como profesional u oficiante para empezar a recibir trabajos
@@ -22,7 +22,7 @@
                 <h3 style="margin-bottom: 24px; color: var(--text);">Datos Personales</h3>
                 
                 <!-- Nombre y Apellido -->
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px;">
+                <div class="form-row-2" style="margin-bottom: 16px;">
                   <div class="form-group">
                     <label for="nombre">Nombre *</label>
                     <input
@@ -95,7 +95,7 @@
                 </div>
 
                 <!-- Contraseña -->
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+                <div class="form-row-2 form-row-passwords">
                   <div class="form-group">
                     <label for="password">Contraseña *</label>
                     <input
@@ -425,17 +425,39 @@
               </div>
             </template>
 
-            <!-- Paso 3: Métodos de Pago -->
+            <!-- Paso 3: Métodos de Pago / Promo lanzamiento -->
             <template #step-3>
               <div class="step-content">
-                <h3 style="margin-bottom: 24px; color: var(--text);">Suscripción y Pago</h3>
+                <h3 style="margin-bottom: 24px; color: var(--text);">
+                  {{ promoLanzamientoActiva ? 'Plan de lanzamiento' : 'Suscripción y Pago' }}
+                </h3>
+
+                <div
+                  v-if="promoLanzamientoActiva"
+                  class="promo-lanzamiento-box"
+                  style="margin-bottom: 20px; padding: 16px; border-radius: 10px; background: linear-gradient(135deg, #ecfdf5, #f0f9ff); border: 1px solid #86efac;"
+                >
+                  <p style="margin: 0 0 8px; font-weight: 700; color: #15803d;">
+                    {{ promoLanzamiento.mensaje || 'Promo de lanzamiento activa' }}
+                  </p>
+                  <p style="margin: 0; color: #334155; font-size: 0.95rem;">
+                    Al registrarte activamos <strong>{{ promoLanzamiento.planNombre || 'Premium' }}</strong>
+                    gratis por <strong>{{ promoLanzamiento.diasGratis || 30 }} días</strong>.
+                    No hace falta pagar ahora.
+                  </p>
+                </div>
                 
                 <!-- Mensajes de error de campos obligatorios (paso 3) -->
-                <div v-if="errores.plan || errores.metodoPago || errores.aceptaTerminos" class="error error-general-box" style="margin-bottom: 16px;">
+                <div v-if="!promoLanzamientoActiva && (errores.plan || errores.metodoPago || errores.aceptaTerminos)" class="error error-general-box" style="margin-bottom: 16px;">
                   <p v-if="errores.plan">{{ errores.plan }}</p>
                   <p v-if="errores.metodoPago">{{ errores.metodoPago }}</p>
                   <p v-if="errores.aceptaTerminos">{{ errores.aceptaTerminos }}</p>
                 </div>
+                <div v-else-if="promoLanzamientoActiva && errores.aceptaTerminos" class="error error-general-box" style="margin-bottom: 16px;">
+                  <p>{{ errores.aceptaTerminos }}</p>
+                </div>
+
+                <template v-if="!promoLanzamientoActiva">
                 <!-- Selección de Plan -->
                 <div class="form-group" style="margin-bottom: 24px;">
                   <label style="margin-bottom: 12px; display: block; font-weight: 500;">
@@ -454,7 +476,7 @@
                     >
                       <div class="plan-header">
                         <h4>{{ plan.nombre }}</h4>
-                        <div class="plan-badge" v-if="normalizeText(plan.nombre) === 'pro'">⭐ Más elegido</div>
+                        <div class="plan-badge" v-if="normalizeText(plan.nombre) === 'premium'">⭐ Más completo</div>
                       </div>
                       <p class="plan-descripcion">{{ plan.descripcion }}</p>
                       <div class="plan-precio">
@@ -499,7 +521,9 @@
                 >
                   {{ mensajeFreeZonas }}
                 </div>
+                </template>
 
+                <template v-if="!promoLanzamientoActiva">
                 <p style="color: #64748b; margin-bottom: 24px; text-align: center;">
                   Los planes de pago se abonan por <strong>transferencia</strong> (MISMO / CVU o alias).
                 </p>
@@ -531,6 +555,7 @@
                     </div>
                   </div>
                 </div>
+                </template>
 
                 <!-- Términos y condiciones -->
                 <div class="form-group" style="margin-top: 30px;">
@@ -695,6 +720,15 @@ const planesDisponibles = ref<any[]>([])
 const cargandoPlanes = ref(false)
 const planSeleccionado = ref<any>(null)
 const mesesSuscripcion = ref(1)
+const promoLanzamiento = ref<{
+  activa: boolean
+  planNombre?: string | null
+  diasGratis?: number
+  fechaFinUtc?: string | null
+  mensaje?: string | null
+}>({ activa: false })
+
+const promoLanzamientoActiva = computed(() => !!promoLanzamiento.value.activa)
 
 // Opciones de duración
 const opcionesDuracion = computed(() => {
@@ -716,12 +750,12 @@ const fileInputFotoPerfil = ref<HTMLInputElement | null>(null)
 const imagenesTrabajoBase64 = ref<string[]>([])
 
 // Wizard steps
-const wizardSteps = [
+const wizardSteps = computed(() => [
   { label: 'Datos Personales' },
   { label: 'Oficio/Profesión' },
-  { label: 'Pago' },
+  { label: promoLanzamientoActiva.value ? 'Plan gratis' : 'Pago' },
   { label: 'Fotos (opcional)' }
-]
+])
 
 const MENSAJE_OBLIGATORIO = 'Campo obligatorio'
 const MENSAJE_ZONAS_FREE = 'Con el plan Free solo podés tener 1 zona de cobertura. Eliminá las demás o seleccioná otro plan.'
@@ -765,7 +799,7 @@ function validarPasoActual (step: number): boolean {
   }
   if (step === 3) {
     let valido = true
-    if (!planSeleccionado.value) {
+    if (!promoLanzamientoActiva.value && !planSeleccionado.value) {
       setError('plan', 'Seleccioná un plan de suscripción.')
       valido = false
     } else {
@@ -774,7 +808,9 @@ function validarPasoActual (step: number): boolean {
 
     // Restricción de zonas: si el plan es Free, solo se permite 1 zona.
     // El plan se elige al final del wizard, por eso recién se valida acá.
-    const planNormalizado = normalizeText((planSeleccionado.value?.nombre ?? '').toString())
+    const planNormalizado = promoLanzamientoActiva.value
+      ? normalizeText(promoLanzamiento.value.planNombre ?? 'premium')
+      : normalizeText((planSeleccionado.value?.nombre ?? '').toString())
     const zonasCount = Array.isArray(formulario?.zonasCobertura) ? formulario.zonasCobertura.length : 0
     if (planNormalizado === 'free' && zonasCount > 1) {
       // La UI ya muestra el mensaje en el paso 3; acá solo bloqueamos avanzar.
@@ -785,7 +821,7 @@ function validarPasoActual (step: number): boolean {
       setError('general', '')
     }
 
-    if (planNormalizado !== 'free' && !metodoPagoSeleccionado.value) {
+    if (!promoLanzamientoActiva.value && planNormalizado !== 'free' && !metodoPagoSeleccionado.value) {
       setError('metodoPago', 'Seleccioná un método de pago.')
       valido = false
     } else {
@@ -812,6 +848,7 @@ const normalizeText = (text: string): string => {
 }
 
 const maxZonasCoberturaActual = computed(() => {
+  if (promoLanzamientoActiva.value) return 99999
   // Antes de entrar al paso 3 (Pago) no imponemos límites por plan.
   if (!restriccionZonasPorPlanActiva.value) return 99999
   if (!planSeleccionado.value) return 99999
@@ -820,6 +857,7 @@ const maxZonasCoberturaActual = computed(() => {
 })
 
 const mensajeFreeZonas = computed(() => {
+  if (promoLanzamientoActiva.value) return ''
   if (!planSeleccionado.value) return ''
   const planNormalizado = normalizeText(planSeleccionado.value?.nombre ?? '')
   const zonasCount = Array.isArray(formulario?.zonasCobertura) ? formulario.zonasCobertura.length : 0
@@ -913,9 +951,17 @@ const cargarCategorias = async (tipo?: 'Oficiante' | 'Profesional') => {
 
 // Cargar planes al montar el componente (no cargar categorías hasta que se seleccione un tipo)
 onMounted(async () => {
+  const promo = await profesionalService.obtenerLanzamientoPromo()
+  promoLanzamiento.value = promo
+
   await cargarPlanes()
-  // Seleccionar plan básico por defecto
-  if (planesDisponibles.value.length > 0) {
+  if (promo.activa) {
+    const nombrePromo = normalizeText(promo.planNombre ?? 'premium')
+    const planPromo = planesDisponibles.value.find((p: any) => normalizeText(p?.nombre ?? '') === nombrePromo)
+      || planesDisponibles.value.find((p: any) => normalizeText(p?.nombre ?? '') === 'premium')
+    if (planPromo) seleccionarPlan(planPromo)
+    metodoPagoSeleccionado.value = null
+  } else if (planesDisponibles.value.length > 0) {
     const planBasico = planesDisponibles.value.find((p: any) => {
       const n = normalizeText(p?.nombre ?? '')
       return n === 'basica' || n === 'basico'
@@ -1102,7 +1148,7 @@ const registrarProfesional = async () => {
       }
 
       const nombrePlanNormalizado = normalizeText(planSeleccionado.value?.nombre ?? '')
-      const requierePago = nombrePlanNormalizado !== 'free'
+      const requierePago = !promoLanzamientoActiva.value && nombrePlanNormalizado !== 'free'
 
       // Validar método de pago
       if (requierePago && !metodoPagoSeleccionado.value) {
@@ -1134,7 +1180,9 @@ const registrarProfesional = async () => {
               codigoPostal: z.codigoPostal
             }))
           : undefined,
-        planSeleccionado: planSeleccionado.value?.nombre,
+        planSeleccionado: promoLanzamientoActiva.value
+          ? (promoLanzamiento.value.planNombre || 'Premium')
+          : planSeleccionado.value?.nombre,
         metodoPago: requierePago ? (metodoPagoSeleccionado.value ?? 'transferencia') : undefined,
         mesesSuscripcion: requierePago ? mesesSuscripcion.value : 1,
         fotoPerfilBase64: fotoPerfilBase64.value || undefined,
@@ -1143,8 +1191,16 @@ const registrarProfesional = async () => {
 
       const result = await profesionalService.registrar(datosProfesional)
       const inst = result.instruccionesTransferencia
+      const promoOk = result.profesional?.promoLanzamientoAplicada
 
-      if (inst && inst.montoArs > 0) {
+      if (promoOk) {
+        alert(
+          result.profesional?.promoLanzamientoMensaje
+            || promoLanzamiento.value.mensaje
+            || 'Registro exitoso. Tu plan Premium de lanzamiento ya está activo.'
+        )
+        router.push(ROUTES.HOME)
+      } else if (inst && inst.montoArs > 0) {
         instruccionesTransferencia.value = inst
         modalTransferenciaAbierto.value = true
       } else {
@@ -2235,8 +2291,78 @@ input.error, textarea.error {
   filter: brightness(1.05);
 }
 
+.registro-container {
+  max-width: 800px;
+  padding-top: 40px;
+}
+
+.registro-card {
+  padding: 40px;
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(34, 197, 94, 0.1);
+  cursor: default;
+}
+
+.registro-card:hover {
+  transform: none;
+}
+
+.form-row-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  align-items: start;
+}
+
+.form-row-passwords .form-group {
+  display: flex;
+  flex-direction: column;
+  margin-bottom: 0;
+}
+
+.form-row-passwords .form-group label {
+  min-height: 2.6em;
+  line-height: 1.3;
+  display: flex;
+  align-items: flex-end;
+}
+
 /* Responsive */
 @media (max-width: 768px) {
+  .registro-section {
+    padding: 16px 0 48px;
+  }
+
+  .registro-container {
+    max-width: 100%;
+    padding: 8px 10px 24px;
+  }
+
+  .registro-card {
+    padding: 20px 14px;
+    border-radius: 12px;
+  }
+
+  .form-row-2 {
+    gap: 12px;
+  }
+
+  /* En móvil: contraseñas en columna para evitar labels desalineados */
+  .form-row-passwords {
+    grid-template-columns: 1fr;
+    gap: 0;
+  }
+
+  .form-row-passwords .form-group {
+    margin-bottom: 16px;
+  }
+
+  .form-row-passwords .form-group label {
+    min-height: 0;
+    display: block;
+  }
+
   .categorias-grid {
     grid-template-columns: 1fr;
   }

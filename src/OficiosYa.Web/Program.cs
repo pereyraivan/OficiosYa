@@ -55,6 +55,8 @@ builder.Services.AddHttpClient<IImageModerationService, SightengineImageModerati
 builder.Services.Configure<TransferenciaSuscripcionOptions>(builder.Configuration.GetSection("TransferenciaSuscripcion"));
 builder.Services.Configure<EmailOptions>(builder.Configuration.GetSection("Email"));
 builder.Services.Configure<AppOptions>(builder.Configuration.GetSection("App"));
+builder.Services.Configure<OficiosYa.Application.Options.LanzamientoPromoOptions>(
+    builder.Configuration.GetSection(OficiosYa.Application.Options.LanzamientoPromoOptions.SectionName));
 builder.Services.AddScoped<OficiosYa.Application.Services.IPasswordResetEmailService, PasswordResetEmailService>();
 
 // JWT

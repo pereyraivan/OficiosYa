@@ -6,23 +6,17 @@
         <span>OficiosYa</span>
       </div>
 
-      <button
-        class="menu-toggle"
-        type="button"
-        @click="toggleMenu"
-        :class="{ active: menuOpen }"
-      >
-        <span></span>
-        <span></span>
-        <span></span>
-      </button>
-
       <nav class="navlinks" :class="{ active: menuOpen }">
         <router-link to="/" class="nav-link" :class="{ active: isActiveInicio }">Inicio</router-link>
         <router-link :to="{ path: '/', query: { tipo: 'oficiante' } }" class="nav-link" :class="{ active: isActiveOficiantes }">Oficiantes</router-link>
         <router-link :to="{ path: '/', query: { tipo: 'profesional' } }" class="nav-link" :class="{ active: isActiveProfesionales }">Profesionales</router-link>
-        <div class="nav-dropdown" :class="{ open: dropdownOpen, active: isActiveEmpleos || isActive('/publicar-trabajo') }" @mouseenter="dropdownOpen = true" @mouseleave="dropdownOpen = false">
-          <button type="button" class="nav-dropdown-trigger nav-link" @click="toggleDropdown" aria-haspopup="true" :aria-expanded="dropdownOpen">
+        <div
+          class="nav-dropdown"
+          :class="{ open: dropdownOpen, active: isActiveEmpleos || isActive('/publicar-trabajo') }"
+          @mouseenter="onDropdownEnter('empleos')"
+          @mouseleave="onDropdownLeave('empleos')"
+        >
+          <button type="button" class="nav-dropdown-trigger nav-link" @click.stop="toggleDropdown('empleos')" aria-haspopup="true" :aria-expanded="dropdownOpen">
             Empleos
           </button>
           <div class="nav-dropdown-menu" @click.stop>
@@ -34,13 +28,13 @@
         <div
           class="nav-dropdown"
           :class="{ open: planesDropdownOpen }"
-          @mouseenter="planesDropdownOpen = true"
-          @mouseleave="planesDropdownOpen = false"
+          @mouseenter="onDropdownEnter('planes')"
+          @mouseleave="onDropdownLeave('planes')"
         >
           <button
             type="button"
             class="nav-dropdown-trigger nav-link"
-            @click.stop="planesDropdownOpen = !planesDropdownOpen"
+            @click.stop="toggleDropdown('planes')"
             aria-haspopup="true"
             :aria-expanded="planesDropdownOpen"
           >
@@ -77,13 +71,13 @@
           v-if="authStore.esAdmin"
           class="nav-dropdown"
           :class="{ open: adminDropdownOpen, active: isActiveAdmin }"
-          @mouseenter="adminDropdownOpen = true"
-          @mouseleave="adminDropdownOpen = false"
+          @mouseenter="onDropdownEnter('admin')"
+          @mouseleave="onDropdownLeave('admin')"
         >
           <button
             type="button"
             class="nav-dropdown-trigger nav-link"
-            @click.stop="adminDropdownOpen = !adminDropdownOpen"
+            @click.stop="toggleDropdown('admin')"
             aria-haspopup="true"
             :aria-expanded="adminDropdownOpen"
           >
@@ -110,6 +104,7 @@
             :title="nombreCompleto"
           >
             <span class="user-avatar">{{ inicialesUsuario }}</span>
+            <span class="user-avatar-name-mobile">{{ nombreCompleto }}</span>
           </button>
           <div class="user-dropdown-menu" @click.stop>
             <div class="user-dropdown-header">
@@ -153,6 +148,18 @@
           <button type="button" class="cta" @click="irARegistro(); closeMenu()">Regístrate</button>
         </template>
       </nav>
+
+      <button
+        class="menu-toggle"
+        type="button"
+        aria-label="Abrir menú"
+        @click="toggleMenu"
+        :class="{ active: menuOpen }"
+      >
+        <span></span>
+        <span></span>
+        <span></span>
+      </button>
     </div>
   </header>
 </template>
@@ -248,6 +255,8 @@ function toggleMenu () {
     planesDropdownOpen.value = false
     adminDropdownOpen.value = false
     userDropdownOpen.value = false
+  } else if (authStore.estaAutenticado && authStore.esProfesional) {
+    void cargarResumenPlanUsuario()
   }
 }
 
@@ -274,8 +283,37 @@ function irAPanel (tab: string) {
   router.push({ path: '/mi-panel', query: { tab } })
 }
 
-function toggleDropdown () {
-  dropdownOpen.value = !dropdownOpen.value
+/** Solo desktop con mouse real: evita hover “pegajoso” en táctil. */
+function canUseHoverDropdown () {
+  return typeof window !== 'undefined'
+    && window.matchMedia('(hover: hover) and (pointer: fine)').matches
+}
+
+type NavDropdownId = 'empleos' | 'planes' | 'admin'
+
+function setDropdown (id: NavDropdownId, open: boolean) {
+  dropdownOpen.value = id === 'empleos' ? open : false
+  planesDropdownOpen.value = id === 'planes' ? open : false
+  adminDropdownOpen.value = id === 'admin' ? open : false
+  if (open) userDropdownOpen.value = false
+}
+
+function toggleDropdown (id: NavDropdownId) {
+  const isOpen =
+    id === 'empleos' ? dropdownOpen.value
+      : id === 'planes' ? planesDropdownOpen.value
+        : adminDropdownOpen.value
+  setDropdown(id, !isOpen)
+}
+
+function onDropdownEnter (id: NavDropdownId) {
+  if (!canUseHoverDropdown()) return
+  setDropdown(id, true)
+}
+
+function onDropdownLeave (id: NavDropdownId) {
+  if (!canUseHoverDropdown()) return
+  setDropdown(id, false)
 }
 
 function closeDropdown () {
@@ -430,6 +468,7 @@ onUnmounted(() => {
   align-items: center;
   justify-content: space-between;
   padding: 14px 0;
+  gap: 12px;
 }
 
 .logo {
@@ -462,6 +501,7 @@ onUnmounted(() => {
   cursor: pointer;
   padding: 0;
   z-index: 1001;
+  flex-shrink: 0;
 }
 
 .menu-toggle span {
@@ -489,6 +529,7 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   gap: 16px;
+  margin-left: auto;
 }
 
 .nav-link {
@@ -558,9 +599,15 @@ onUnmounted(() => {
   z-index: 100;
 }
 
-.nav-dropdown:not(.user-dropdown):hover .nav-dropdown-menu,
 .nav-dropdown:not(.user-dropdown).open .nav-dropdown-menu {
   display: flex;
+}
+
+/* Hover solo con mouse; en táctil el :hover queda “pegado” y no se puede cerrar */
+@media (hover: hover) and (pointer: fine) {
+  .nav-dropdown:not(.user-dropdown):hover .nav-dropdown-menu {
+    display: flex;
+  }
 }
 
 .nav-dropdown-menu .nav-link {
@@ -821,6 +868,10 @@ onUnmounted(() => {
   padding-left: 20px;
 }
 
+.user-avatar-name-mobile {
+  display: none;
+}
+
 .user-dropdown-logout {
   color: #64748b;
 }
@@ -833,95 +884,227 @@ onUnmounted(() => {
 @media (max-width: 768px) {
   .menu-toggle {
     display: flex;
+    margin-left: 8px;
+    margin-right: 4px;
+  }
+
+  .nav {
+    padding: 16px 4px;
+  }
+
+  .logo {
+    margin-left: 0;
+    margin-right: auto;
+    z-index: 1003;
+    padding-left: 8px;
   }
 
   .navlinks {
     position: fixed;
     top: 0;
-    right: -100%;
-    width: 100%;
-    max-width: 320px;
+    right: 0;
+    left: auto;
+    width: min(78vw, 260px);
+    max-width: 260px;
     height: 100vh;
-    background: linear-gradient(180deg, #f0fdf4 0%, #ecfdf5 50%, #f0f9ff 100%);
+    height: 100dvh;
+    background: #f8fafc;
     flex-direction: column;
-    justify-content: center;
-    align-items: center;
-    gap: 32px;
-    transition: right 0.3s ease;
+    justify-content: flex-start;
+    align-items: stretch;
+    gap: 0;
+    margin-left: 0;
+    transform: translateX(105%);
+    transition: transform 0.25s ease;
     z-index: 1000;
     box-shadow: -4px 0 20px rgba(0, 0, 0, 0.12);
-    padding: 80px 24px 40px;
+    padding: 64px 0 calc(28px + env(safe-area-inset-bottom, 0px));
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
+    /* Cerrado: no dejar capa invisible tapando la esquina del FAB */
+    pointer-events: none;
+    visibility: hidden;
+  }
+
+  .navlinks:not(.active) {
+    width: 0 !important;
+    max-width: 0 !important;
+    padding: 0 !important;
+    overflow: hidden !important;
+    box-shadow: none !important;
+    border: none !important;
   }
 
   .navlinks.active {
-    right: 0;
+    transform: translateX(0);
+    visibility: visible;
+    pointer-events: auto;
+    width: min(78vw, 260px) !important;
+    max-width: 260px !important;
+    padding: 64px 0 calc(28px + env(safe-area-inset-bottom, 0px)) !important;
+    overflow-y: auto !important;
+    box-shadow: -4px 0 20px rgba(0, 0, 0, 0.12) !important;
   }
 
-  .navlinks a.nav-link,
-  .nav-dropdown-trigger {
-    font-size: 1.2rem;
+  .navlinks > .nav-link,
+  .navlinks > .nav-dropdown,
+  .navlinks > .cta,
+  .navlinks > .user-dropdown {
+    width: 100%;
+    border-bottom: 1px solid #e2e8f0;
+    flex-shrink: 0;
+  }
+
+  .navlinks > .nav-link,
+  .navlinks > .nav-dropdown > .nav-dropdown-trigger {
+    display: flex;
+    width: 100%;
+    justify-content: flex-start;
+    text-align: left;
+    font-size: 0.95rem;
     font-weight: 600;
     color: #0f172a;
+    padding: 12px 16px;
+    border-radius: 0;
+    border-left: 3px solid transparent;
+    border-right: none;
+    border-top: none;
+    margin: 0;
+  }
+
+  .navlinks a.nav-link.active,
+  .nav-dropdown.active .nav-dropdown-trigger {
+    background: rgba(34, 197, 94, 0.08);
+    border-left-color: var(--brand);
+    border-color: transparent;
+    border-left: 3px solid var(--brand);
   }
 
   .navlinks .nav-dropdown .nav-link {
     color: #0f172a;
+    font-size: 0.9rem;
+    padding: 10px 16px 10px 28px;
   }
 
   .navlinks .cta-outline {
     color: #475569;
   }
 
-  .nav-dropdown-menu,
-  .user-dropdown-menu {
+  .nav-dropdown-menu {
     position: static;
-    margin-top: 8px;
-    margin-bottom: 8px;
+    margin: 0;
     min-width: 100%;
     max-width: 100%;
     box-shadow: none;
-    border: 1px solid #e5e7eb;
+    border: none;
+    border-radius: 0;
+    background: #f1f5f9;
   }
 
+  /* En drawer móvil solo se abre/cierra con tap (.open), nunca por hover */
+  .nav-dropdown:not(.user-dropdown):hover .nav-dropdown-menu {
+    display: none;
+  }
+
+  .nav-dropdown:not(.user-dropdown).open .nav-dropdown-menu {
+    display: flex;
+  }
+
+  .planes-dropdown-menu {
+    max-height: 36vh;
+  }
+
+  /* Menú de usuario siempre expandido en el drawer móvil */
   .user-dropdown {
     width: 100%;
     display: flex;
     flex-direction: column;
-    align-items: center;
+    align-items: stretch;
+    order: 99;
+  }
+
+  .user-avatar-btn {
+    display: none;
+  }
+
+  .user-dropdown-menu {
+    display: flex !important;
+    position: static;
+    margin: 0;
+    min-width: 100%;
+    max-width: 100%;
+    max-height: none;
+    box-shadow: none;
+    border: none;
+    border-radius: 0;
+    background: #fff;
+    overflow: visible;
+    padding-bottom: 8px;
   }
 
   .user-dropdown-header {
-    flex-direction: column;
-    text-align: center;
+    flex-direction: row;
+    text-align: left;
+    padding: 14px 16px;
+  }
+
+  .user-dropdown-item {
+    padding: 12px 16px;
+    min-height: 44px;
+  }
+
+  .user-dropdown-logout {
+    color: #dc2626;
+    font-weight: 600;
+    margin-bottom: 8px;
   }
 
   .navlinks .cta {
-    font-size: 1.1rem;
-    padding: 16px 32px;
+    width: calc(100% - 32px);
+    margin: 12px 16px;
+    font-size: 0.95rem;
+    padding: 12px 16px;
+    box-sizing: border-box;
+  }
+
+  .nav-link-login {
+    padding: 12px 16px !important;
   }
 
   .nav {
     position: relative;
     z-index: 1002;
   }
-
-  .logo {
-    z-index: 1003;
-  }
 }
 
 @media (max-width: 480px) {
-  .navlinks {
-    gap: 24px;
+  .nav {
+    padding: 14px 6px;
   }
 
-  .navlinks a {
-    font-size: 1.1rem;
+  .logo {
+    padding-left: 10px;
+  }
+
+  .menu-toggle {
+    margin-right: 8px;
+  }
+
+  .navlinks {
+    width: min(72vw, 230px);
+    max-width: 230px;
+  }
+
+  .navlinks > .nav-link,
+  .navlinks > .nav-dropdown > .nav-dropdown-trigger {
+    font-size: 0.9rem;
+    padding: 11px 14px;
   }
 
   .navlinks .cta {
-    font-size: 1rem;
-    padding: 14px 28px;
+    font-size: 0.9rem;
+    padding: 11px 14px;
   }
 }
 </style>

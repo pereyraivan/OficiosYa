@@ -7,6 +7,17 @@
           Elegí el plan que se adapte a vos. Más contactos y acceso a empleos publicados.
         </p>
 
+        <div v-if="promoLanzamiento?.activa" class="aviso-promo-lanzamiento">
+          <p>
+            <strong>{{ promoLanzamiento.mensaje }}</strong>
+          </p>
+          <p class="aviso-promo-detalle">
+            Al registrarte como profesional activamos {{ promoLanzamiento.planNombre }} gratis por
+            {{ promoLanzamiento.diasGratis }} días. Sin transferencia.
+          </p>
+          <router-link to="/registrar-profesional" class="btn-promo-registrar">Registrate ahora</router-link>
+        </div>
+
         <div v-if="suscripcionActiva" class="aviso-plan-activo">
           <p>
             <strong>Tu plan {{ suscripcionActiva.tipo }}</strong>
@@ -142,6 +153,12 @@ const error = ref('')
 const modalTransferenciaAbierto = ref(false)
 const instruccionesTransferencia = ref<InstruccionesPagoTransferencia | null>(null)
 const pagoYaExistente = ref(false)
+const promoLanzamiento = ref<{
+  activa: boolean
+  planNombre?: string | null
+  diasGratis?: number
+  mensaje?: string | null
+} | null>(null)
 
 function formatNum (n: number) {
   return typeof n === 'number' ? n.toLocaleString('es-AR') : n
@@ -314,10 +331,12 @@ async function cargarPerfil () {
 onMounted(async () => {
   cargando.value = true
   try {
-    const [list] = await Promise.all([
+    const [list, promo] = await Promise.all([
       profesionalService.obtenerPlanesSuscripcion(),
+      profesionalService.obtenerLanzamientoPromo(),
       cargarPerfil()
     ])
+    promoLanzamiento.value = promo
     const order: Record<string, number> = { free: 0, basica: 1, basico: 1, pro: 2, premium: 3 }
     planes.value = (list || []).sort((a: any, b: any) =>
       (order[normalizarPlanNombre(a?.nombre)] ?? 99) - (order[normalizarPlanNombre(b?.nombre)] ?? 99)
@@ -342,6 +361,26 @@ onMounted(async () => {
   margin-bottom: 1rem;
 }
 .aviso-plan-activo p { margin: 0; color: #065f46; }
+.aviso-promo-lanzamiento {
+  background: linear-gradient(135deg, #ecfdf5, #eff6ff);
+  border: 1px solid #86efac;
+  border-radius: 12px;
+  padding: 16px 18px;
+  margin-bottom: 1.25rem;
+  text-align: center;
+}
+.aviso-promo-lanzamiento p { margin: 0 0 0.45rem; color: #14532d; }
+.aviso-promo-detalle { color: #334155 !important; font-size: 0.95rem; }
+.btn-promo-registrar {
+  display: inline-block;
+  margin-top: 0.4rem;
+  padding: 0.6rem 1.2rem;
+  background: var(--brand, #22c55e);
+  color: #fff;
+  font-weight: 700;
+  border-radius: 8px;
+  text-decoration: none;
+}
 .aviso-pendiente {
   background: #fffbeb;
   border: 1px solid #fde68a;

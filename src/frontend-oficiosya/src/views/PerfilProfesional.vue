@@ -827,6 +827,12 @@ onMounted(cargarPerfil)
   border-radius: 12px;
   padding: 20px;
   margin-bottom: 24px;
+  box-sizing: border-box;
+}
+.resena-input,
+.resena-textarea {
+  box-sizing: border-box;
+  max-width: 100%;
 }
 .resena-form-titulo {
   font-size: 1rem;
@@ -1111,6 +1117,38 @@ onMounted(cargarPerfil)
 }
 
 @media (max-width: 600px) {
+  .perfil-main {
+    padding: 16px 12px 48px;
+  }
+
+  .perfil-card {
+    padding: 16px 14px;
+    border-radius: 12px;
+  }
+
+  .perfil-tabs {
+    margin: 0 -14px 16px -14px;
+    padding: 0 14px;
+  }
+
+  .perfil-tab {
+    padding: 10px 12px;
+    font-size: 0.875rem;
+  }
+
+  .resena-form {
+    padding: 12px;
+    margin-bottom: 16px;
+  }
+
+  .resena-form-stars {
+    gap: 6px;
+  }
+
+  .star-btn {
+    font-size: 1.6rem;
+  }
+
   .perfil-header {
     flex-direction: column;
     align-items: center;

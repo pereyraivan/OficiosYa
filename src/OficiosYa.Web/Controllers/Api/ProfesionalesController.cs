@@ -1344,6 +1344,9 @@ namespace OficiosYa.Web.Controllers.Api
             RegistrarProfesionalRequest request,
             ProfesionalResponse profesional)
         {
+            if (profesional.PromoLanzamientoAplicada)
+                return null;
+
             if (!EsPlanDePago(request))
                 return null;
 

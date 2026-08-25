@@ -339,9 +339,18 @@ footer {
 
 .footer {
   display: grid;
-  grid-template-columns: 2fr 1fr 1fr 1fr;
+  grid-template-columns: 2fr 1fr 1fr;
   gap: 16px;
   padding: 32px 0;
+}
+
+.footer > div {
+  min-width: 0;
+}
+
+.footer a {
+  word-break: break-word;
+  overflow-wrap: anywhere;
 }
 
 .small {
@@ -412,14 +421,25 @@ footer {
   }
 }
 
+@media (max-width: 768px) {
+  .footer {
+    grid-template-columns: 1fr 1fr;
+    gap: 20px 16px;
+    padding-left: 20px;
+    padding-right: 20px;
+    box-sizing: border-box;
+  }
+
+  .footer > div:first-child {
+    grid-column: 1 / -1;
+  }
+}
+
 @media (max-width: 600px) {
   .grid {
     grid-template-columns: repeat(2, 1fr);
   }
   .pros {
-    grid-template-columns: 1fr;
-  }
-  .footer {
     grid-template-columns: 1fr;
   }
   .search {

@@ -218,14 +218,14 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 0px;
+  padding: 12px 16px;
   color: #64748b;
   width: 100%;
   border: 1px solid #e2e8f0;
   border-radius: 6px;
   background: white;
   transition: border-color 0.2s, box-shadow 0.2s;
-  min-height: 44px;
+  min-height: 48px;
   box-sizing: border-box;
 }
 
@@ -234,9 +234,12 @@ onUnmounted(() => {
   box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
 }
 
-.ciudad-autocomplete .search-field svg {
+.ciudad-autocomplete .search-field > svg:first-child {
   color: #64748b;
   flex-shrink: 0;
+  width: 18px;
+  height: 18px;
+  display: block;
 }
 
 .ciudad-autocomplete .search-input {
@@ -247,6 +250,10 @@ onUnmounted(() => {
   font-size: 14px;
   width: 100%;
   flex: 1;
+  min-width: 0;
+  padding: 0;
+  margin: 0;
+  line-height: 1.25;
 }
 
 .ciudad-autocomplete .search-input:disabled {

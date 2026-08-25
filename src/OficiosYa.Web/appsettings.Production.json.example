@@ -19,5 +19,12 @@
   },
   "Email": {
     "Enabled": false
+  },
+  "LanzamientoPromo": {
+    "Enabled": true,
+    "PlanNombre": "Premium",
+    "DiasGratis": 30,
+    "FechaFinUtc": "2026-09-30T23:59:59Z",
+    "MensajePublico": "¡Lanzamiento OficiosYa! Registrate y usá Premium gratis durante 30 días. Después podés renovar o seguir en Free."
   }
 }
