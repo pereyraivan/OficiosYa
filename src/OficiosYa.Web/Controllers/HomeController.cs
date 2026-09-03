@@ -16,8 +16,13 @@ public class HomeController : Controller
 
     public IActionResult Index()
     {
-        var spa = Path.Combine(_env.WebRootPath, "dist", "index.html");
+        var spa = Path.Combine(_env.WebRootPath, "index.html");
         if (System.IO.File.Exists(spa))
+            return PhysicalFile(spa, "text/html; charset=utf-8");
+
+        // Fallback legacy: build viejo en /dist/
+        var spaDist = Path.Combine(_env.WebRootPath, "dist", "index.html");
+        if (System.IO.File.Exists(spaDist))
             return Redirect("~/dist/");
 
         return View();
@@ -25,22 +30,22 @@ public class HomeController : Controller
 
     public IActionResult Buscar()
     {
-        return View();
+        return Redirect("~/oficiantes");
     }
 
     public IActionResult Login()
     {
-        return View();
+        return Redirect("~/login");
     }
 
     public IActionResult Registrar()
     {
-        return View();
+        return Redirect("~/registrar");
     }
 
     public IActionResult VueApp()
     {
-        return View();
+        return Redirect("~/");
     }
 
     [ResponseCache(Duration = 0, Location = ResponseCacheLocation.None, NoStore = true)]

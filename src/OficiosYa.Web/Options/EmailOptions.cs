@@ -8,7 +8,7 @@ namespace OficiosYa.Web.Options
         public bool UseSsl { get; set; } = true;
         public string Username { get; set; } = string.Empty;
         public string Password { get; set; } = string.Empty;
-        public string FromAddress { get; set; } = "noreply@oficiosya.com";
-        public string FromName { get; set; } = "OficiosYa";
+        public string FromAddress { get; set; } = "oficiosyapro@gmail.com";
+        public string FromName { get; set; } = "TuOficioPro";
     }
 }

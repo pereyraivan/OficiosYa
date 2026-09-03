@@ -26,13 +26,13 @@ namespace OficiosYa.Web.Services
             var baseUrl = _appOptions.FrontendBaseUrl.TrimEnd('/');
             var enlace = $"{baseUrl}/restablecer-contrasena?token={Uri.EscapeDataString(tokenPlano)}";
             var nombre = usuario.ObtenerNombreCompleto();
-            var asunto = "Restablecer tu contraseña — OficiosYa";
+            var asunto = "Restablecer tu contraseña — TuOficioPro";
             var cuerpoHtml = $@"
 <!DOCTYPE html>
 <html>
 <body style=""font-family: Arial, sans-serif; color: #1e293b; line-height: 1.5;"">
   <p>Hola {System.Net.WebUtility.HtmlEncode(nombre)},</p>
-  <p>Recibimos una solicitud para restablecer la contraseña de tu cuenta en OficiosYa.</p>
+  <p>Recibimos una solicitud para restablecer la contraseña de tu cuenta en TuOficioPro.</p>
   <p>
     <a href=""{enlace}"" style=""display: inline-block; padding: 12px 24px; background: #059669; color: #fff; text-decoration: none; border-radius: 8px; font-weight: 600;"">
       Restablecer contraseña

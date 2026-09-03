@@ -13,8 +13,12 @@ using OficiosYa.Web.Services;
 using OficiosYa.Web.Options;
 
 var builder = WebApplication.CreateBuilder(args);
-// Sobrescribe config local (no versionado): copiá appsettings.Local.json.example → appsettings.Local.json.
-builder.Configuration.AddJsonFile("appsettings.Local.json", optional: true, reloadOnChange: true);
+// Solo en desarrollo: overrides locales (SMTP, FrontendBaseUrl localhost, etc.).
+// Nunca cargar Local.json en producción: si se sube a Somee pisa Somee con localhost.
+if (builder.Environment.IsDevelopment())
+{
+    builder.Configuration.AddJsonFile("appsettings.Local.json", optional: true, reloadOnChange: true);
+}
 
 // Add services to the container.
 // Configurar encoder para permitir todos los caracteres Unicode (incluyendo ñ y acentos)
@@ -127,10 +131,12 @@ builder.Services.AddCors(options =>
                 ?? new[]
                 {
                     "http://localhost:5173",
+                    "https://tuoficiopro.com.ar",
+                    "http://tuoficiopro.com.ar",
+                    "https://www.tuoficiopro.com.ar",
+                    "http://www.tuoficiopro.com.ar",
                     "http://oficiosya.somee.com",
-                    "https://oficiosya.somee.com",
-                    "http://www.oficiosya.somee.com",
-                    "https://www.oficiosya.somee.com"
+                    "https://oficiosya.somee.com"
                 };
 
             policy.WithOrigins(corsOrigins)
@@ -173,7 +179,7 @@ app.UseRouting();
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
-    app.UseSwaggerUI(c => c.SwaggerEndpoint("/swagger/v1/swagger.json", "OficiosYa API v1"));
+    app.UseSwaggerUI(c => c.SwaggerEndpoint("/swagger/v1/swagger.json", "TuOficioPro API v1"));
 }
 
 // Middleware para asegurar charset UTF-8 en respuestas JSON (antes de escribir la respuesta)
@@ -211,7 +217,9 @@ app.MapControllerRoute(
     pattern: "{controller=Home}/{action=Index}/{id?}")
     .WithStaticAssets();
 
-// Vue SPA (history mode): rutas bajo /dist/* → index.html
+// Vue SPA (history mode): cualquier ruta no API/MVC → wwwroot/index.html
+app.MapFallbackToFile("index.html");
+// Compatibilidad temporal con builds viejos en /dist/
 app.MapFallbackToFile("/dist/{*path}", "dist/index.html");
 
 app.Run();

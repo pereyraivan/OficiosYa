@@ -345,6 +345,7 @@
                     :show-map="false"
                     :max-zonas="maxZonasCoberturaActual"
                   />
+                  <!-- Aviso plan Free + 1 zona: deshabilitado en lanzamiento (todo gratis)
                   <p
                     v-if="!restriccionZonasPorPlanActiva"
                     class="aviso-zonas-free"
@@ -358,6 +359,7 @@
                   >
                     {{ mensajeFreeZonas }}
                   </p>
+                  -->
                 </div>
 
                 <!-- Descripción Profesional -->
@@ -514,6 +516,7 @@
                 </div>
                 <span v-if="errores.plan" class="error">{{ errores.plan }}</span>
 
+                <!-- Aviso validación Free + 1 zona: deshabilitado en lanzamiento
                 <div
                   v-if="mensajeFreeZonas"
                   class="error error-general-box"
@@ -521,6 +524,7 @@
                 >
                   {{ mensajeFreeZonas }}
                 </div>
+                -->
                 </template>
 
                 <template v-if="!promoLanzamientoActiva">
@@ -806,20 +810,21 @@ function validarPasoActual (step: number): boolean {
       setError('plan', '')
     }
 
-    // Restricción de zonas: si el plan es Free, solo se permite 1 zona.
-    // El plan se elige al final del wizard, por eso recién se valida acá.
+    // Restricción Free + 1 zona deshabilitada en lanzamiento (todo gratis)
+    // const planNormalizado = promoLanzamientoActiva.value
+    //   ? normalizeText(promoLanzamiento.value.planNombre ?? 'premium')
+    //   : normalizeText((planSeleccionado.value?.nombre ?? '').toString())
+    // const zonasCount = Array.isArray(formulario?.zonasCobertura) ? formulario.zonasCobertura.length : 0
+    // if (planNormalizado === 'free' && zonasCount > 1) {
+    //   setError('general', '')
+    //   valido = false
+    // } else {
+    //   setError('general', '')
+    // }
+
     const planNormalizado = promoLanzamientoActiva.value
       ? normalizeText(promoLanzamiento.value.planNombre ?? 'premium')
       : normalizeText((planSeleccionado.value?.nombre ?? '').toString())
-    const zonasCount = Array.isArray(formulario?.zonasCobertura) ? formulario.zonasCobertura.length : 0
-    if (planNormalizado === 'free' && zonasCount > 1) {
-      // La UI ya muestra el mensaje en el paso 3; acá solo bloqueamos avanzar.
-      setError('general', '')
-      valido = false
-    } else {
-      // Limpiar error si ya no aplica
-      setError('general', '')
-    }
 
     if (!promoLanzamientoActiva.value && planNormalizado !== 'free' && !metodoPagoSeleccionado.value) {
       setError('metodoPago', 'Seleccioná un método de pago.')
@@ -848,12 +853,13 @@ const normalizeText = (text: string): string => {
 }
 
 const maxZonasCoberturaActual = computed(() => {
-  if (promoLanzamientoActiva.value) return 99999
-  // Antes de entrar al paso 3 (Pago) no imponemos límites por plan.
-  if (!restriccionZonasPorPlanActiva.value) return 99999
-  if (!planSeleccionado.value) return 99999
-  const planNormalizado = normalizeText(planSeleccionado.value?.nombre ?? '')
-  return planNormalizado === 'free' ? 1 : 99999
+  // Sin límite por plan Free en lanzamiento (reactivar cuando cobren planes)
+  return 99999
+  // if (promoLanzamientoActiva.value) return 99999
+  // if (!restriccionZonasPorPlanActiva.value) return 99999
+  // if (!planSeleccionado.value) return 99999
+  // const planNormalizado = normalizeText(planSeleccionado.value?.nombre ?? '')
+  // return planNormalizado === 'free' ? 1 : 99999
 })
 
 const mensajeFreeZonas = computed(() => {

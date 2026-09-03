@@ -5,7 +5,7 @@
       <div class="container nav">
         <div class="logo" @click="irAHome">
           <div class="logo-badge">🛠️</div>
-          <span>OficiosYa</span>
+          <span>{{ appName }}</span>
         </div>
         <nav class="navlinks">
           <a href="#" @click="irAHome">Inicio</a>
@@ -182,7 +182,9 @@ import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
 import { useUserRegistrationForm } from '../composables/useForm'
-import { MESSAGES, ROUTES } from '../utils/constants'
+import { MESSAGES, ROUTES, APP_CONFIG } from '../utils/constants'
+
+const appName = APP_CONFIG.APP_NAME
 
 const router = useRouter()
 const authStore = useAuthStore()

@@ -35,7 +35,7 @@
           </svg>
         </div>
         <div class="oy-support-panel-titles">
-          <strong>Soporte OficiosYa</strong>
+          <strong>Soporte TuOficioPro</strong>
           <span>Te respondemos por WhatsApp</span>
         </div>
         <button type="button" class="oy-support-cerrar" aria-label="Cerrar" @click="cerrarMenu">×</button>
@@ -70,9 +70,9 @@ const WHATSAPP_NUMERO = '5493816460066'
 const menuAbierto = ref(false)
 
 const mensajes: Record<string, string> = {
-  consulta: 'Hola OficiosYa, tengo una consulta sobre la plataforma.',
-  registro: 'Hola OficiosYa, soy profesional/oficiante y necesito ayuda con registro, planes o pago.',
-  problema: 'Hola OficiosYa, tengo un problema y necesito soporte.'
+  consulta: 'Hola TuOficioPro, tengo una consulta sobre la plataforma.',
+  registro: 'Hola TuOficioPro, soy profesional/oficiante y necesito ayuda con registro, planes o pago.',
+  problema: 'Hola TuOficioPro, tengo un problema y necesito soporte.'
 }
 
 const opciones = [

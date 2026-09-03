@@ -124,7 +124,7 @@
 
               <div v-if="miPerfil?.id" class="link-resenas-box">
                 <h3 class="link-resenas-titulo">Link para que te dejen reseñas</h3>
-                <p class="link-resenas-desc">Compartí este link con tus clientes (por WhatsApp, email o tarjeta) para que te dejen su opinión en OficiosYa.</p>
+                <p class="link-resenas-desc">Compartí este link con tus clientes (por WhatsApp, email o tarjeta) para que te dejen su opinión en TuOficioPro.</p>
                 <div class="link-resenas-row">
                   <input
                     type="text"

@@ -89,11 +89,14 @@ export const CIUDADES_TUCUMAN = [
 // Configuración de la aplicación
 export const APP_CONFIG = {
   API_BASE_URL: import.meta.env.VITE_API_URL || 'http://localhost:5000/api',
-  APP_NAME: 'OficiosYa',
+  APP_NAME: 'TuOficioPro',
+  SITE_DOMAIN: 'tuoficiopro.com.ar',
   APP_VERSION: '1.0.0',
   MIN_PASSWORD_LENGTH: 6,
   MAX_FILE_SIZE: 5 * 1024 * 1024, // 5MB
-  SUPPORTED_IMAGE_TYPES: ['image/jpeg', 'image/png', 'image/webp']
+  SUPPORTED_IMAGE_TYPES: ['image/jpeg', 'image/png', 'image/webp'],
+  /** Contacto legal, privacidad y arrepentimiento (mismo que recuperación de contraseña por ahora) */
+  CONTACT_EMAIL: 'oficiosyapro@gmail.com'
 } as const
 
 // Mensajes de la aplicación
@@ -132,5 +135,6 @@ export const ROUTES = {
   PROFILE: '/perfil',
   DASHBOARD: '/dashboard',
   TERMINOS: '/terminos-y-condiciones',
-  POLITICA: '/politica-de-privacidad'
+  POLITICA: '/politica-de-privacidad',
+  ARREPENTIMIENTO: '/arrepentimiento-y-baja'
 } as const

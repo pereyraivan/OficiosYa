@@ -8,6 +8,7 @@ import OlvideContrasena from '../views/OlvideContrasena.vue'
 import RestablecerContrasena from '../views/RestablecerContrasena.vue'
 import TerminosCondiciones from '../views/TerminosCondiciones.vue'
 import PoliticaPrivacidad from '../views/PoliticaPrivacidad.vue'
+import ArrepentimientoBaja from '../views/ArrepentimientoBaja.vue'
 import GestionarCategorias from '../views/admin/GestionarCategorias.vue'
 import GestionarSuscripciones from '../views/admin/GestionarSuscripciones.vue'
 import GestionarProfesionales from '../views/admin/GestionarProfesionales.vue'
@@ -111,6 +112,11 @@ const routes = [
     path: '/politica-de-privacidad',
     name: 'PoliticaPrivacidad',
     component: PoliticaPrivacidad
+  },
+  {
+    path: '/arrepentimiento-y-baja',
+    name: 'ArrepentimientoBaja',
+    component: ArrepentimientoBaja
   },
   {
     path: '/admin',

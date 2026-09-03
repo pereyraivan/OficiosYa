@@ -5,7 +5,7 @@
       <div class="container nav">
         <div class="logo">
           <div class="logo-badge">🛠️</div>
-          <span>OficiosYa</span>
+          <span>TuOficioPro</span>
         </div>
         <nav class="navlinks">
           <router-link to="/">Inicio</router-link>
@@ -28,7 +28,7 @@
         <div>
           <div class="logo" style="color:white">
             <div class="logo-badge">🛠️</div>
-            <span>OficiosYa</span>
+            <span>TuOficioPro</span>
           </div>
           <p class="small" style="margin-top:8px">
             Conectamos personas con profesionales de confianza en su zona.
@@ -60,7 +60,7 @@
         </div>
       </div>
       <div class="container" style="padding:12px 0;border-top:1px solid #1f2937;color:#94a3b8">
-        <div class="small">© 2025 OficiosYa</div>
+        <div class="small">© 2025 TuOficioPro</div>
       </div>
     </footer>
   </div>

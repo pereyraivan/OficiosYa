@@ -482,7 +482,7 @@ async function cargarPerfil () {
   }
 }
 
-const MENSAJE_WHATSAPP = 'Hola, te contacto desde OficiosYa. Me interesa tu servicio.'
+const MENSAJE_WHATSAPP = 'Hola, te contacto desde TuOficioPro. Me interesa tu servicio.'
 
 function urlWhatsApp (telefono: string | null | undefined): string {
   if (!telefono || !telefono.trim()) return '#'

@@ -4,10 +4,14 @@ import path from 'path'
 
 export default defineConfig({
   plugins: [vue()],
-  base: '/dist/',
+  // SPA en la raíz del sitio (sin /dist/)
+  base: '/',
   build: {
-    outDir: '../OficiosYa.Web/wwwroot/dist',
-    emptyOutDir: true
+    outDir: '../OficiosYa.Web/wwwroot',
+    // No vaciar wwwroot: preserva uploads/, lib/, css/, etc.
+    emptyOutDir: false,
+    // Assets compilados en /assets/ (Vite limpia solo esa carpeta de build si hace falta)
+    assetsDir: 'assets'
   },
   resolve: {
     alias: {

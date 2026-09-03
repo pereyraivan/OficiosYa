@@ -95,7 +95,7 @@ const postulacion = reactive({ descripcion: '', monto: '' })
 /** true = puede postular (Pro/Premium), false = no (Free/Básico), null = no cargado o no es profesional */
 const puedePostularEmpleos = ref<boolean | null>(null)
 
-const INTRO_OFICIOSYA = 'Te contacto desde la página OficiosYa, me postulo al trabajo que publicaste.'
+const INTRO_PLATAFORMA = 'Te contacto desde la página TuOficioPro, me postulo al trabajo que publicaste.'
 
 function fechaFormateada (iso: string) {
   try {
@@ -134,7 +134,7 @@ function textoPostulacion (): string {
   const desc = postulacion.descripcion.trim()
   const monto = postulacion.monto.trim()
   const lineas = [
-    INTRO_OFICIOSYA,
+    INTRO_PLATAFORMA,
     '',
     '*Descripción del trabajo que realizaré:*',
     desc || '(Sin descripción)',
@@ -179,7 +179,7 @@ function enviarPorEmail () {
     return
   }
   const mensaje = textoPostulacion().replace(/\*/g, '')
-  const mailto = `mailto:${email}?subject=Postulación desde OficiosYa&body=${encodeURIComponent(mensaje)}`
+  const mailto = `mailto:${email}?subject=Postulación desde TuOficioPro&body=${encodeURIComponent(mensaje)}`
   window.location.href = mailto
   cerrarModal()
 }

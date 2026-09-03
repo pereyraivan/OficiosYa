@@ -132,7 +132,7 @@
         <div>
           <div class="logo" style="color:white; cursor: pointer;" @click="irAInicio">
             <div class="logo-badge">🛠️</div>
-            <span>OficiosYa</span>
+            <span>{{ appName }}</span>
           </div>
           <p class="small" style="margin-top:8px">Conectamos personas con profesionales de confianza en su zona.</p>
         </div>
@@ -145,10 +145,11 @@
           <strong>Legal</strong>
           <div class="small" style="margin-top:8px"><RouterLink to="/terminos-y-condiciones" style="color:inherit; text-decoration:none">Términos y condiciones</RouterLink></div>
           <div class="small"><RouterLink to="/politica-de-privacidad" style="color:inherit; text-decoration:none">Política de privacidad</RouterLink></div>
+          <div class="small"><RouterLink to="/arrepentimiento-y-baja" style="color:inherit; text-decoration:none">Arrepentimiento y baja</RouterLink></div>
         </div>
       </div>
-      <div class="container" style="padding:12px 0;border-top:1px solid #1f2937;color:#94a3b8">
-        <div class="small">© 2025 OficiosYa</div>
+      <div class="container footer-copy" style="border-top:1px solid #1f2937;color:#94a3b8">
+        <div class="small">© 2026 {{ appName }}</div>
       </div>
     </footer>
   </div>
@@ -158,10 +159,12 @@
 import { ref, onMounted, computed, nextTick, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
-import { CATEGORIAS_SERVICIO } from '../utils/constants'
+import { CATEGORIAS_SERVICIO, APP_CONFIG } from '../utils/constants'
 import { abrirMenuSoporteWhatsApp } from '../utils/soporteWhatsApp'
 import { profesionalService } from '../services/profesionalService'
 import type { Profesional } from '../types'
+
+const appName = APP_CONFIG.APP_NAME
 
 const router = useRouter()
 const route = useRoute()
@@ -609,6 +612,28 @@ onMounted(() => {
   
   .pasos-grid {
     grid-template-columns: 1fr;
+  }
+
+  footer .container.footer,
+  footer .footer-copy {
+    padding-left: 16px !important;
+    padding-right: 16px !important;
+    box-sizing: border-box;
+  }
+
+  footer .footer {
+    padding-top: 16px !important;
+    padding-bottom: 12px !important;
+    gap: 10px 16px !important;
+  }
+
+  footer .footer > div:nth-child(2) {
+    padding-left: 12px;
+  }
+
+  footer .footer-copy {
+    padding-top: 10px !important;
+    padding-bottom: 10px !important;
   }
 }
 </style>

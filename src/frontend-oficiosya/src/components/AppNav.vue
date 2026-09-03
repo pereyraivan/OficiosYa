@@ -3,7 +3,7 @@
     <div class="container nav">
       <div class="logo" @click="irAInicio" style="cursor: pointer;">
         <div class="logo-badge">🛠️</div>
-        <span>OficiosYa</span>
+        <span>{{ appName }}</span>
       </div>
 
       <nav class="navlinks" :class="{ active: menuOpen }">
@@ -169,7 +169,9 @@ import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
 import { profesionalService } from '../services/profesionalService'
+import { APP_CONFIG } from '../utils/constants'
 
+const appName = APP_CONFIG.APP_NAME
 const route = useRoute()
 const router = useRouter()
 const authStore = useAuthStore()

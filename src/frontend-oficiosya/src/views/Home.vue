@@ -184,7 +184,7 @@
     <section class="section py-5 mobile-accordion-wrap section-recientes">
       <div class="container">
         <h2 class="text-center mb-3 desktop-only">Perfiles agregados recientemente</h2>
-        <p class="text-center text-muted mb-4 desktop-only">Los últimos perfiles que se sumaron a OficiosYa.</p>
+        <p class="text-center text-muted mb-4 desktop-only">Los últimos perfiles que se sumaron a TuOficioPro.</p>
         <button type="button" class="mobile-accordion-btn mobile-only" @click="accordionDestacados = !accordionDestacados" aria-expanded="accordionDestacados">
           <span>Perfiles agregados recientemente</span>
           <span class="accordion-chevron" :class="{ open: accordionDestacados }">▼</span>
@@ -258,7 +258,7 @@
         <div>
           <div class="logo" style="color:white; cursor: pointer;" @click="irAInicio">
             <div class="logo-badge">🛠️</div>
-            <span>OficiosYa</span>
+            <span>{{ appName }}</span>
           </div>
           <p class="small footer-desc">Conectamos personas con profesionales de confianza en su zona.</p>
         </div>
@@ -271,10 +271,11 @@
           <strong>Legal</strong>
           <div class="small footer-link-block"><RouterLink to="/terminos-y-condiciones" style="color:inherit; text-decoration:none">Términos y condiciones</RouterLink></div>
           <div class="small"><RouterLink to="/politica-de-privacidad" style="color:inherit; text-decoration:none">Política de privacidad</RouterLink></div>
+          <div class="small"><RouterLink to="/arrepentimiento-y-baja" style="color:inherit; text-decoration:none">Arrepentimiento y baja</RouterLink></div>
         </div>
       </div>
       <div class="container footer-copy">
-        <div class="small">© 2025 OficiosYa</div>
+        <div class="small">© 2026 {{ appName }}</div>
       </div>
     </footer>
   </div>
@@ -285,8 +286,10 @@ import { ref, computed, onMounted, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
 import { profesionalService } from '../services/profesionalService'
-import { CATEGORIAS_SERVICIO } from '../utils/constants'
+import { CATEGORIAS_SERVICIO, APP_CONFIG } from '../utils/constants'
 import { abrirMenuSoporteWhatsApp } from '../utils/soporteWhatsApp'
+
+const appName = APP_CONFIG.APP_NAME
 import CiudadAutocomplete from '../components/CiudadAutocomplete.vue'
 import SearchableDropdown from '../components/SearchableDropdown.vue'
 import type { Profesional } from '../types'
@@ -1069,11 +1072,11 @@ footer {
 
 .footer-desc,
 .footer-link-block {
-  margin-top: 8px;
+  margin-top: 6px;
 }
 
 .footer-copy {
-  padding: 12px 20px;
+  padding: 12px 16px;
   border-top: 1px solid #1f2937;
   color: #94a3b8;
   box-sizing: border-box;
@@ -1128,16 +1131,18 @@ footer {
     display: none !important;
   }
 
-  /* Footer: no pegar el texto al borde en móvil */
+  /* Footer: menos aire vertical; márgenes L/R iguales */
   .site-footer .container.footer,
   .site-footer .footer-copy {
-    padding-left: 20px !important;
-    padding-right: 20px !important;
+    padding-left: 16px !important;
+    padding-right: 16px !important;
+    box-sizing: border-box;
   }
+
   .site-footer .footer {
-    padding-top: 28px;
-    padding-bottom: 24px;
-    gap: 20px 16px;
+    padding-top: 16px !important;
+    padding-bottom: 12px !important;
+    gap: 10px 16px !important;
     grid-template-columns: 1fr 1fr !important;
   }
 
@@ -1145,8 +1150,17 @@ footer {
     grid-column: 1 / -1;
   }
 
+  .site-footer .footer > div:nth-child(2) {
+    padding-left: 12px;
+  }
+
   .site-footer .footer > div {
     max-width: 100%;
+  }
+
+  .site-footer .footer-copy {
+    padding-top: 10px !important;
+    padding-bottom: 10px !important;
   }
 
   /* Campos del buscador alineados (mismo padding / ícono) */
